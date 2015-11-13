@@ -8,6 +8,8 @@
 #include "ns3/fb-headers.h"
 #include "ns3/adhoc-wifi-mac.h"
 
+#include <vector>
+
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE ("MULTICAST_TEST");
@@ -82,6 +84,11 @@ main (int argc, char *argv[])
 	double eta = 1.0;
 	double delta = 0.1;
 	double rho = 0.1;
+
+  double getTotalTx = 0.0;
+	double sumTotalRx = 0.0;
+	std::vector<double> getTotalRx;
+	getTotalRx.clear ();
 	
 	CommandLine cmd;
 	cmd.AddValue ("TxNodeNum", "Number of tx nodes", txNodeNum);
@@ -248,17 +255,20 @@ main (int argc, char *argv[])
 	//	" feedbackType: " << feedbackType << " percentile: " << percentile << " alpha: " << alpha << " beta: " << beta << std::endl;
 	
 	Ptr<OnOffApplication> onof = txApp.Get(0)->GetObject<OnOffApplication> ();
-	NS_LOG_UNCOND("Source node sent: " << (onof->GetTotalTx()/1000));
-	fout << "Source node sent: " << (onof->GetTotalTx()/1000) << std::endl;
+	getTotalTx = onof->GetTotalTx ()/1000;
+	NS_LOG_UNCOND("Source node sent: " << getTotalTx);
+	fout << "Source node sent: " << getTotalTx << std::endl;
 
-	for (uint32_t i=0; i<rxApp.GetN(); i++)
+	for (uint32_t i = 0; i < rxApp.GetN(); i++)
 	{
 		Ptr<PacketSink> sink2 = rxApp.Get(i)->GetObject<PacketSink> ();
-		NS_LOG_UNCOND("Node " << i+1 << " received: " << sink2->GetTotalRx()/1000);
-		fout << "Node " << i+1 << " received: " << sink2->GetTotalRx()/1000 << std::endl;
+		getTotalRx.push_back(sink2->GetTotalRx ()/1000);
+		NS_LOG_UNCOND("Node " << i+1 << " received: " << getTotalRx[i]);
+		fout << "Node " << i+1 << " received: " << getTotalRx[i] << std::endl;
+		sumTotalRx += getTotalRx[i];
 	}
 
-	double totaltime=txtime + rxtime + idletime + ccatime + switchtime;
+	double totaltime = txtime + rxtime + idletime + ccatime + switchtime;
 	double airtime = (totaltime - idletime)/totaltime;
 
 	Ptr<WifiNetDevice> txNetDevice = txDevice.Get(0)->GetObject<WifiNetDevice> ();
@@ -267,6 +277,7 @@ main (int argc, char *argv[])
 	Ptr<SbraWifiManager> sbraWifi = DynamicCast<SbraWifiManager>(txRegMac->GetWifiRemoteStationManager());
 
 	NS_LOG_UNCOND("AirTime: " << airtime);
+	NS_LOG_UNCOND("AvgPer: " << 1 - sumTotalRx/(getTotalTx*rxNodeNum));
 	NS_LOG_UNCOND("AvgMinSnr(dB): " <<sbraWifi->GetAvgMinSnrDb ());
 	NS_LOG_UNCOND("AvgTxMode(Mb/s): " <<sbraWifi->GetAvgTxMode ());
 	NS_LOG_UNCOND("AvgTxMcs: " <<sbraWifi->GetAvgTxMcs ());
