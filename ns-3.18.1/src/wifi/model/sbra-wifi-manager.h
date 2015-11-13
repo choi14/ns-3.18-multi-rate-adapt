@@ -22,7 +22,9 @@ public:
   SbraWifiManager ();
   virtual ~SbraWifiManager ();
 
-	double GetAvgMinSnrDb ();
+	double GetAvgMinSnrDb (void);
+	double GetAvgTxMode (void);
+	double GetAvgTxMcs (void);
 	
   void UpdateInfo(Mac48Address addr, struct rxInfo info);
 	
@@ -69,8 +71,11 @@ private:
 	macAddress m_macAddress;
 	GroupRxSnr m_GroupRxSnr;
 	uint32_t m_type;
-	double m_sum_min_snr;
 	uint32_t m_num;
+	uint32_t m_GroupTxMcs;
+	double m_sum_min_snr;
+	double m_sum_tx_mode;
+	double m_sum_tx_mcs;
 	double m_minSnr;
 	double m_per;
 	bool m_addBasicMode;

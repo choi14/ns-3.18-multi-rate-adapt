@@ -310,6 +310,9 @@ MacLow::MacLow ()
 	m_rxInfo.TotalPacket=0;
 	m_rxSnrVectorSize = 1000;
 	m_ewmaSnr = 0.0;
+	m_avgSnr = 1;
+	m_avgDev = 0.0;
+	m_estSnr = 1;
 	m_eta = 0.0;
 	m_delta = 0.0;
 	m_rho = 0.0;
@@ -502,23 +505,24 @@ MacLow::SetPromisc (void)
 {
   m_promisc = true;
 }
-// jychoi
-void
+void // jychoi
 MacLow::SetRxInfo (struct rxInfo info)
 {
 	m_rxInfo = info;
 }
-void
+void // jychoi
 MacLow::SetAlpha (double alpha)
 {
 	m_alpha = alpha;
+	NS_LOG_INFO ("m_alpha: " << m_alpha);
 }
-void
+void // jychoi
 MacLow::SetEDR (double eta, double delta, double rho)
 {
 	m_eta = eta;
 	m_delta = delta;
 	m_rho = rho;
+	NS_LOG_INFO ("m_eta: " << m_eta << " m_delta: " << m_delta << " m_rho: " << m_rho );
 }
 Mac48Address
 MacLow::GetAddress (void) const
@@ -573,14 +577,27 @@ MacLow::GetBssid (void) const
 void 
 MacLow::CalculateEwma (double alpha)
 {
-	m_ewmaSnr = (1-alpha) * m_ewmaSnr + alpha * m_rxSnr; 
+	m_ewmaSnr = (1-alpha)*m_ewmaSnr + alpha*m_rxSnr; 
 }
 void 
 MacLow::CalculateEDR (double eta, double delta, double rho)
 {
-	m_avgSnr = (1-delta) * m_avgSnr + delta * m_rxSnr;
-	m_avgDev = (1-rho) * m_avgDev + rho * abs(m_avgSnr-m_rxSnr);
-	m_estSnr = m_avgSnr - eta * m_avgDev; 
+	m_avgSnr = (1-delta)*m_avgSnr + delta*m_rxSnr;
+	
+	double snrDiff = m_avgSnr - m_rxSnr;
+	if(snrDiff > 0)
+		m_avgDev = (1-rho)*m_avgDev + rho*snrDiff;
+	else
+		m_avgDev = (1-rho)*m_avgDev - rho*snrDiff;
+
+	m_estSnr = m_avgSnr - eta *m_avgDev;
+	if(m_estSnr < 1)
+	{
+		NS_LOG_UNCOND ("Estimated SNR < 0");
+		m_estSnr = 1;
+	}
+
+	NS_LOG_ERROR ("snr " << m_avgSnr <<"  dev " << m_avgDev <<" result " << m_estSnr);
 }
 
 struct rxInfo
@@ -611,6 +628,7 @@ MacLow::GetRxInfo (
 			return m_rxInfo;
 			break;
 		} // case 0
+		
 		case 1: // Exponential Weighted  Moving Average
 		{
 			NS_LOG_INFO ("feedbackType: " << fbtype << " alpha: " << m_alpha);
@@ -619,6 +637,7 @@ MacLow::GetRxInfo (
 			return m_rxInfo;
 			break;
 		} //case 1
+		
 		case 2: // average - b*stddev
 		{
 			NS_LOG_INFO ("feedbackType: " << fbtype << " beta: " << beta);
@@ -640,16 +659,30 @@ MacLow::GetRxInfo (
 			if (stdvar >= 0)
 				stddev = sqrt(stdvar);
 			else
-				NS_ASSERT ("stdvar < 0");
+				NS_LOG_UNCOND ("stdvar < 0");
 						
 			//NS_LOG_INFO ("avgRssi: " << avgRssi << " stdvar: " << stdvar  << " stddev: " << stddev << " avgRssi - b*stddev: " << avgRssi - b*stddev);
-			m_rxInfo.Rssi = (uint32_t)10*std::log10(avgRssi - b*stddev);
+			
+			double selectedRssi = avgRssi - b*stddev;
+			if(selectedRssi > 1)
+				m_rxInfo.Rssi = (uint32_t)10*std::log10(selectedRssi);
+			else
+			{
+				NS_LOG_UNCOND ("Error: RSSI < 1");
+				m_rxInfo.Rssi = 1;
+			}
 			return m_rxInfo;
 			break;
 		} // case 2
+		
 		case 3: // RAM using eta, delta, rho 
 		{
 			NS_LOG_INFO ("feedbackType: " << fbtype << " eta: " << eta << " delta: " << delta << " rho: " << rho);
+			if(m_estSnr < 1)
+			{
+				NS_LOG_UNCOND ("Estimated SNR < 0");
+				m_estSnr = 1;
+			}
 			m_rxInfo.Rssi = (uint32_t)10*std::log10(m_estSnr);
 			m_eta = eta;
 			m_delta = delta;

@@ -72,6 +72,7 @@ private:
 	
 	uint64_t m_feedbackPeriod;
 	bool m_initialize;
+	bool m_setMacLowValue;
 	Mac48Address m_srcAddress;
 	uint32_t m_fbtype;
 	double m_alpha;

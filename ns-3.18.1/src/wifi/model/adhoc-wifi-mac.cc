@@ -100,10 +100,9 @@ AdhocWifiMac::GetTypeId (void)
 AdhocWifiMac::AdhocWifiMac ()
 {
 	m_initialize = false;
+	m_setMacLowValue = false;
 	m_feedbackPeriod = 100;
   NS_LOG_FUNCTION (this);
-	m_low->SetAlpha(m_alpha);
-	m_low->SetEDR(m_eta, m_delta, m_rho);
 
   // Let the lower layers know that we are acting in an IBSS
   SetTypeOfStation (ADHOC_STA);
@@ -187,7 +186,14 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
 
-  if (m_qosSupported)
+	if(m_initialize == false)
+	{
+		m_low->SetAlpha(m_alpha);
+		m_low->SetEDR(m_eta, m_delta, m_rho);
+		m_initialize = true;
+	}
+
+	if (m_qosSupported)
     {
       // Sanity check that the TID is valid
       NS_ASSERT (tid < 8);
@@ -285,7 +291,7 @@ AdhocWifiMac::SendFeedback ()
 	m_rxInfoGet = m_low->GetRxInfo (m_fbtype, m_percentile, m_alpha, m_beta, m_eta, m_delta, m_rho);
   Ptr<Packet> packet = Create<Packet> ();
   FeedbackHeader FeedbackHdr; // Set RSSI, SNR, txPacket, TotalPacket
-  FeedbackHdr.SetRssi (m_rxInfoGet.Rssi);
+	FeedbackHdr.SetRssi (m_rxInfoGet.Rssi);
   FeedbackHdr.SetSnr (m_rxInfoGet.Snr);
   FeedbackHdr.SetLossPacket (m_rxInfoGet.LossPacket);
   FeedbackHdr.SetTotalPacket (m_rxInfoGet.TotalPacket);

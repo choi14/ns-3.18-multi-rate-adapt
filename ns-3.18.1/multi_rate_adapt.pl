@@ -1,4 +1,3 @@
-use Switch;
 foreach $bound (20){
 	foreach $doppler (0.05, 0.1){
 		foreach $n_node (1, 5, 10){

@@ -242,7 +242,7 @@ main (int argc, char *argv[])
 
 	fout.open(out_filename.str().c_str(), std::ostream::out);
 	if(!fout.good())
-  NS_LOG_UNCOND("File open failed");
+		NS_LOG_UNCOND("File open failed");
 	
 	//fout << "multicastrateadapt_seed" << seed << "_rateAdaptType" << rateAdaptType << "_feedbackPeriod" << feedbackPeriod <<  "_doppler" << dopplerVelocity << "_bound" << bound << 
 	//	" feedbackType: " << feedbackType << " percentile: " << percentile << " alpha: " << alpha << " beta: " << beta << std::endl;
@@ -267,14 +267,15 @@ main (int argc, char *argv[])
 	Ptr<SbraWifiManager> sbraWifi = DynamicCast<SbraWifiManager>(txRegMac->GetWifiRemoteStationManager());
 
 	NS_LOG_UNCOND("AirTime: " << airtime);
-	NS_LOG_UNCOND("AvgMinSnr(dB): " <<sbraWifi->GetAvgMinSnrDb());
+	NS_LOG_UNCOND("AvgMinSnr(dB): " <<sbraWifi->GetAvgMinSnrDb ());
+	NS_LOG_UNCOND("AvgTxMode(Mb/s): " <<sbraWifi->GetAvgTxMode ());
+	NS_LOG_UNCOND("AvgTxMcs: " <<sbraWifi->GetAvgTxMcs ());
 	
 	fout << "AirTime: " << airtime << std::endl;
 	fout << "AvgMinSnr: " << sbraWifi->GetAvgMinSnrDb () << std::endl;
 	fout.close();
 
 	Simulator::Destroy ();
-	
 	NS_LOG_INFO("Throughput: "<< (double)data*8/1000/1000/endTime << " Mbps");
 	NS_LOG_INFO("rxdrop: "<<rxdrop);
 	NS_LOG_INFO("rxnum: "<<rxnum);

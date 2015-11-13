@@ -58,6 +58,8 @@ SbraWifiManager::SbraWifiManager ()
 	m_addBasicMode = false;
 	m_num = 0;
 	m_sum_min_snr = 0;
+	m_sum_tx_mode = 0;
+	m_sum_tx_mcs = 0;
 }
 SbraWifiManager::~SbraWifiManager ()
 {
@@ -165,6 +167,7 @@ SbraWifiManager::GroupRateAdaptation ()
 		AddOfdmRate ();
 	
 	uint32_t vsize = m_infos.size();
+	NS_LOG_INFO("vsize: " << vsize);
 	if(vsize == 0)
 	{
 		m_GroupTxMode = GetBasicMode (0);
@@ -179,16 +182,12 @@ SbraWifiManager::GroupRateAdaptation ()
 				m_minSnr = (double)m_infos[m].info.Rssi;
 			}
 		}
-	
 		m_sum_min_snr += m_minSnr;
-		m_num++;
-
-		m_minSnr = std::pow (10.0, m_minSnr/10.0); 
-		//NS_LOG_INFO ("m_minSnr: " << m_minSnr);
-
+		NS_LOG_INFO("SNR SUM: " << m_sum_min_snr);
 		uint32_t NBasicMode = GetNBasicModes ();
 		double Pdr = 0.0;
 
+		m_minSnr = std::pow (10.0, m_minSnr/10.0); 
 		if(m_minSnr > 1.0)
 		{
 			// PER-SNR Rate Adaptation
@@ -235,10 +234,35 @@ SbraWifiManager::GroupRateAdaptation ()
 					NS_ASSERT("Never happen");
 				else if (Per == 1)
 					m_GroupTxMode = GetBasicMode (0);
+
+				int tmpGroupTxMode = m_GroupTxMode.GetDataRate()*0.000001;
+
+				NS_LOG_INFO("tmpGroupTxMode: " << tmpGroupTxMode);
+				switch (tmpGroupTxMode)
+				{
+					case 6:
+						m_GroupTxMcs = 0;	break;
+					case 9:
+						m_GroupTxMcs = 1;	break;
+					case 12:
+						m_GroupTxMcs = 2;	break;
+					case 18:
+						m_GroupTxMcs = 3;	break;
+					case 24:
+						m_GroupTxMcs = 4;	break;
+					case 36:
+						m_GroupTxMcs = 5;	break;
+					case 48:
+						m_GroupTxMcs = 6; break;
+					case 54:
+						m_GroupTxMcs = 7;	break;
+				}
+
+				m_sum_tx_mode += m_GroupTxMode.GetDataRate() * 0.000001;
+				m_sum_tx_mcs += m_GroupTxMcs;
+				m_num++;
 				
-				NS_LOG_INFO ("m_minSnr: " << m_minSnr << " GroupTxDataRate: " <<  m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s");
-				//NS_LOG_INFO("PER: "<< Per << " GroupTxDataRate: " 
-				//		<< m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s");
+				NS_LOG_INFO ("m_minSnr: " << m_minSnr << " GroupTxDataRate: " <<  m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s" << " GroupTxMcs: " << m_GroupTxMcs);
 			}
 
 			// Throughput-SNR Rate Adaptation
@@ -365,6 +389,16 @@ double
 SbraWifiManager::GetAvgMinSnrDb(void)
 {
 	return m_sum_min_snr / (double)m_num;
+}
+double
+SbraWifiManager::GetAvgTxMode(void)
+{
+	return m_sum_tx_mode / (double)m_num;
+}
+double
+SbraWifiManager::GetAvgTxMcs(void)
+{
+	return m_sum_tx_mcs / (double)m_num;
 }
 
 
