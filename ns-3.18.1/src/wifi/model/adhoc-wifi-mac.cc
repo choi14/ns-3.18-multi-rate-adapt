@@ -121,6 +121,7 @@ AdhocWifiMac::AdhocWifiMac ()
   	m_MNC_P = 1;
 
   	m_tableManager = CreateObject<OnlineTableManager> ();
+	
   // Let the lower layers know that we are acting in an IBSS
   SetTypeOfStation (ADHOC_STA);
 }
@@ -383,7 +384,7 @@ AdhocWifiMac::SendTraining(void){
 	for (uint8_t j=0; j<8; j++){
 		for (uint32_t i = 0; i < m_max; i++)
 		{
-					Ptr<Packet> packet = Create<Packet>(1040);
+					Ptr<Packet> packet = Create<Packet>(1440);
 					
 					tl.SetSeq(i);
 					tl.SetRate(j);
@@ -511,8 +512,11 @@ AdhocWifiMac::SetBasicModes(void)
 	m_stationManager->AddBasicMode(WifiMode("OfdmRate54Mbps"));// 11
 
 	NS_LOG_UNCOND ("Number of Basic Modes: " << m_stationManager->GetNBasicModes());
+	
+	m_tableManager->SetRemoteStation(m_stationManager);
+	m_tableManager->SetPhy(m_phy);
+	m_tableManager->GenerateCorrectTable();
 }
-
 
 
 
