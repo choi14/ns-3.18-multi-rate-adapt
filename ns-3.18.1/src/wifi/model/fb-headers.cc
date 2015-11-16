@@ -55,12 +55,12 @@ FeedbackHeader::Deserialize (Buffer::Iterator start)
 }
 // jychoi
 void
-FeedbackHeader::SetRssi (uint32_t rssi)
+FeedbackHeader::SetRssi (int32_t rssi)
 {
 	m_rssi = rssi;
 }
 void
-FeedbackHeader::SetSnr (uint32_t snr)
+FeedbackHeader::SetSnr (int32_t snr)
 {
 	m_snr = snr;
 }
@@ -75,12 +75,12 @@ FeedbackHeader::SetTotalPacket (uint32_t totalPacket)
 	m_totalPacket = totalPacket;
 }
 // jychoi
-uint32_t
+int32_t
 FeedbackHeader::GetRssi (void)
 {
 	return m_rssi;
 }
-uint32_t
+int32_t
 FeedbackHeader::GetSnr (void)
 {
 	return m_snr;

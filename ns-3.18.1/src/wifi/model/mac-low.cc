@@ -309,10 +309,16 @@ MacLow::MacLow ()
 	m_rxInfo.LossPacket=0;
 	m_rxInfo.TotalPacket=0;
 	m_rxSnrVectorSize = 1000;
-	m_ewmaSnr = 0.0;
-	m_avgSnr = 1;
-	m_avgDev = 0.0;
-	m_estSnr = 1;
+	m_ewmaSnr = 0; //dB
+	m_avgSnr = 0; //dB
+	m_devSnr = 0; //dB
+	m_estSnr = 0; //dB
+	
+	m_ewmaRssi = 0; //dB
+	m_avgRssi = 0; //dB
+	m_devRssi = 0; //dB
+	m_estRssi = 0; //dB
+	
 	m_eta = 0.0;
 	m_delta = 0.0;
 	m_rho = 0.0;
@@ -577,29 +583,40 @@ MacLow::GetBssid (void) const
 void 
 MacLow::CalculateEwma (double alpha)
 {
-	m_ewmaSnr = (1-alpha)*m_ewmaSnr + alpha*m_rxSnr; 
+	m_ewmaRssi = (1-alpha)*m_ewmaRssi + alpha*10*std::log10(m_ewmaRssi);
+	m_ewmaSnr = (1-alpha)*m_ewmaSnr + alpha*10*std::log10(m_rxSnr); 
 }
 void 
 MacLow::CalculateEDR (double eta, double delta, double rho)
 {
-	m_avgSnr = (1-delta)*m_avgSnr + delta*m_rxSnr;
+	NS_LOG_INFO ("rxRssi: " << m_rxRssi <<" dbRssi: " << 10*std::log10(m_rxRssi));
+	NS_LOG_INFO ("rxSnr: " << m_rxSnr <<" dbSnr: " << 10*std::log10(m_rxSnr));
 	
-	double snrDiff = m_avgSnr - m_rxSnr;
-	if(snrDiff > 0)
-		m_avgDev = (1-rho)*m_avgDev + rho*snrDiff;
+	m_avgRssi = (1-delta)*m_avgRssi + delta*10*std::log10(m_rxRssi);
+	m_avgSnr = (1-delta)*m_avgSnr + delta*10*std::log10(m_rxSnr);
+	
+	double snrDiff = m_avgSnr - 10*std::log10(m_rxSnr);
+	double rssiDiff = m_avgRssi - 10*std::log10(m_rxRssi);
+	
+	if(rssiDiff > 0)
+		m_devRssi = (1-rho)*m_devRssi + rho*snrDiff;
 	else
-		m_avgDev = (1-rho)*m_avgDev - rho*snrDiff;
+		m_devRssi = (1-rho)*m_devRssi - rho*snrDiff;
+	
+	if(snrDiff > 0)
+		m_devSnr = (1-rho)*m_devSnr + rho*snrDiff;
+	else
+		m_devSnr = (1-rho)*m_devSnr - rho*snrDiff;
 
-	m_estSnr = m_avgSnr - eta *m_avgDev;
-	if(m_estSnr < 1)
-	{
-		NS_LOG_UNCOND ("Estimated SNR < 0");
-		m_estSnr = 1;
-	}
-
-	NS_LOG_ERROR ("snr " << m_avgSnr <<"  dev " << m_avgDev <<" result " << m_estSnr);
+	
+	m_estRssi = m_avgSnr - eta*m_devRssi;
+	m_estSnr = m_avgSnr - eta*m_devSnr;
+	
+	NS_LOG_INFO ("m_avgRssi: " << m_avgRssi <<" m_devRssi: " << m_devRssi <<" m_estRssi: " << m_estRssi);
+	NS_LOG_INFO ("m_avgSnr: " << m_avgSnr <<" m_devSnr: " << m_devSnr <<" m_estSnr: " << m_estSnr);
 }
 
+// jychoi
 struct rxInfo
 MacLow::GetRxInfo (
 		uint32_t fbtype, double percentile, double alpha, double beta,
@@ -609,22 +626,41 @@ MacLow::GetRxInfo (
 	{
 		case 0:
 		{
+			// p-Percentile 
 			NS_LOG_INFO ("feedbackType: " << fbtype << " percentile: " << percentile);
-			m_sortedVector.clear();
-			double p = percentile;
+			m_sortedSnrVector.clear();
+			m_sortedRssiVector.clear();
+			double selectSnr = 0.0;
 			double selectRssi = 0.0;
+			double p = percentile;
 			uint32_t pPercentile = 0;
 
-			std::copy (m_rxSnrVector.begin (), m_rxSnrVector.end(), std::back_inserter(m_sortedVector));
-			std::sort (m_sortedVector.begin (), m_sortedVector.end ());
-			pPercentile = (uint32_t)m_sortedVector.size () * (1-p);
-			if( pPercentile <= (uint32_t)m_sortedVector.size () )
+			// SNR
+			std::copy (m_rxSnrVector.begin (), m_rxSnrVector.end(),
+					std::back_inserter(m_sortedSnrVector));
+			std::sort (m_sortedSnrVector.begin (), m_sortedSnrVector.end ());
+			pPercentile = (uint32_t)m_sortedSnrVector.size ()*(1-p);
+			if( pPercentile <= (uint32_t)m_sortedSnrVector.size () )
 			{
-				selectRssi = m_sortedVector[pPercentile];
-				m_rxInfo.Rssi = (uint32_t)10*std::log10(selectRssi);
+				selectSnr = m_sortedSnrVector[pPercentile];
+				m_rxInfo.Snr = (uint32_t)10*std::log10(selectSnr); //feedback in dB
 			}
 			else
-				NS_ASSERT (" pPercentile > m_sortedVector.size ()");
+				NS_LOG_ERROR (" pPercentile > m_sortedSnrVector.size ()");
+			
+			// RSSI
+			std::copy (m_rxRssiVector.begin (), m_rxRssiVector.end(),
+					std::back_inserter(m_sortedRssiVector));
+			std::sort (m_sortedRssiVector.begin (), m_sortedRssiVector.end ());
+			pPercentile = (uint32_t)m_sortedRssiVector.size ()*(1-p);
+			if( pPercentile <= (uint32_t)m_sortedRssiVector.size () )
+			{
+				selectRssi = m_sortedRssiVector[pPercentile];
+				m_rxInfo.Rssi = (uint32_t)10*std::log10(selectRssi); //feedback in dB
+			}
+			else
+				NS_LOG_ERROR (" pPercentile > m_sortedRssiVector.size ()");
+			
 			return m_rxInfo;
 			break;
 		} // case 0
@@ -632,7 +668,8 @@ MacLow::GetRxInfo (
 		case 1: // Exponential Weighted  Moving Average
 		{
 			NS_LOG_INFO ("feedbackType: " << fbtype << " alpha: " << m_alpha);
-			m_rxInfo.Rssi = (uint32_t)10*std::log10(m_ewmaSnr);
+			m_rxInfo.Rssi = (uint32_t)10*std::log10(m_ewmaRssi);
+			m_rxInfo.Snr = (uint32_t)10*std::log10(m_ewmaSnr);
 			m_alpha = alpha;
 			return m_rxInfo;
 			break;
@@ -641,36 +678,58 @@ MacLow::GetRxInfo (
 		case 2: // average - b*stddev
 		{
 			NS_LOG_INFO ("feedbackType: " << fbtype << " beta: " << beta);
-			std::copy (m_rxSnrVector.begin (), m_rxSnrVector.end(), std::back_inserter(m_sortedVector));
+			
+			m_sortedSnrVector.clear();
+			m_sortedRssiVector.clear();
+			
+			std::copy (m_rxSnrVector.begin (), m_rxSnrVector.end(), 
+					std::back_inserter(m_sortedSnrVector));
+			std::copy (m_rxRssiVector.begin (), m_rxRssiVector.end(), 
+					std::back_inserter(m_sortedRssiVector));
+			
 			double b = beta;
-			double sumRssi = 0.0;
-			double sumVar = 0.0;
-			double stddev = 0.0;
-			uint32_t vsize = m_sortedVector.size ();
+			double avgSnr = 0.0;
+			double varSnr = 0.0;
+			double devSnr = 0.0;
+			double avgRssi = 0.0;
+			double varRssi = 0.0;
+			double devRssi = 0.0;
+			uint32_t vsize = m_sortedRssiVector.size ();
 			
 			for (uint32_t i = 0; i < vsize; i++)
-				sumRssi += m_sortedVector [i];
-			double avgRssi = sumRssi/vsize;
-			
-			for (uint32_t i = 0; i < vsize; i++)
-				sumVar += (m_sortedVector [i] - avgRssi)*(m_sortedVector [i] - avgRssi);
-			double stdvar = sumVar/vsize;
-			
-			if (stdvar >= 0)
-				stddev = sqrt(stdvar);
-			else
-				NS_LOG_UNCOND ("stdvar < 0");
-						
-			//NS_LOG_INFO ("avgRssi: " << avgRssi << " stdvar: " << stdvar  << " stddev: " << stddev << " avgRssi - b*stddev: " << avgRssi - b*stddev);
-			
-			double selectedRssi = avgRssi - b*stddev;
-			if(selectedRssi > 1)
-				m_rxInfo.Rssi = (uint32_t)10*std::log10(selectedRssi);
-			else
 			{
-				NS_LOG_UNCOND ("Error: RSSI < 1");
-				m_rxInfo.Rssi = 1;
+				avgRssi += m_sortedRssiVector [i];
+				avgSnr += m_sortedSnrVector [i];
 			}
+
+			avgRssi = avgRssi/vsize;
+			avgSnr = avgSnr/vsize;
+			
+			for (uint32_t i = 0; i < vsize; i++)
+			{
+				varRssi += (m_sortedRssiVector [i] - avgRssi)*(m_sortedRssiVector [i] - avgRssi);
+				varSnr += (m_sortedSnrVector [i] - avgSnr)*(m_sortedSnrVector [i] - avgSnr);
+			}
+			
+			varRssi = varRssi/vsize;
+			varSnr = varSnr/vsize;
+			
+			if (varSnr >= 0)
+				devSnr = sqrt(varSnr);
+			else
+				NS_LOG_UNCOND ("varSnr < 0");
+						
+			if (varRssi >= 0)
+				devRssi = sqrt(varRssi);
+			else
+				NS_LOG_UNCOND ("varRssi < 0");
+		
+			double selectRssi = 10*std::log10(avgRssi) - b*10*std::log10(devRssi);
+			double selectSnr = 10*std::log10(avgSnr) - b*10*std::log10(devSnr);
+			
+			m_rxInfo.Rssi = (int32_t)selectRssi;
+			m_rxInfo.Snr = (int32_t)selectSnr;
+			
 			return m_rxInfo;
 			break;
 		} // case 2
@@ -678,12 +737,9 @@ MacLow::GetRxInfo (
 		case 3: // RAM using eta, delta, rho 
 		{
 			NS_LOG_INFO ("feedbackType: " << fbtype << " eta: " << eta << " delta: " << delta << " rho: " << rho);
-			if(m_estSnr < 1)
-			{
-				NS_LOG_UNCOND ("Estimated SNR < 0");
-				m_estSnr = 1;
-			}
-			m_rxInfo.Rssi = (uint32_t)10*std::log10(m_estSnr);
+			
+			m_rxInfo.Rssi = (int32_t)m_estRssi;
+			m_rxInfo.Snr = (int32_t)m_estSnr;
 			m_eta = eta;
 			m_delta = delta;
 			m_rho = rho;
@@ -768,7 +824,6 @@ MacLow::NeedCtsToSelf (WifiTxVector dataTxVector)
 void
 MacLow::ReceiveError (Ptr<const Packet> packet, double rxSnr, double rssi)
 {
-	//jychoi
 	Ptr<Packet> copy_packet = Create<Packet> ();
 	copy_packet = packet->Copy ();
 	WifiMacHeader hdr;
@@ -776,8 +831,8 @@ MacLow::ReceiveError (Ptr<const Packet> packet, double rxSnr, double rssi)
 	
 	if(hdr.GetAddr1 ().IsGroup () && hdr.IsData ())
 	{
-		m_rxInfo.LossPacket++;
-		m_rxInfo.TotalPacket++;
+		m_rxInfo.LossPacket++; //jychoi
+		m_rxInfo.TotalPacket++; //jychoi
   	NS_LOG_ERROR ("rx failed "  << hdr.GetSequenceNumber() );
 	}
 
@@ -811,9 +866,9 @@ MacLow::NotifySwitchingStartNow (Time duration)
 
 //jychoi
 void
-MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rssi,  WifiMode txMode, WifiPreamble preamble)
+MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rxRssi,  WifiMode txMode, WifiPreamble preamble)
 {
-  NS_LOG_FUNCTION (this << packet << rxSnr << rssi << txMode << preamble);
+  NS_LOG_FUNCTION (this << packet << rxSnr << rxRssi << txMode << preamble);
   /* A packet is received from the PHY.
    * When we have handled this packet,
    * we handle any packet present in the
@@ -1044,6 +1099,8 @@ MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rssi,  WifiMode txMo
 					NS_LOG_DEBUG ("rx group from=" << hdr.GetAddr2 ());
 					m_rxInfo.TotalPacket++; //jychoi
 					m_rxSnr = rxSnr;
+					m_rxRssi = rxRssi;
+					NS_LOG_INFO ("m_rxRssi: " << m_rxRssi << " m_rxSnr: " << m_rxSnr);
 					CalculateEwma (m_alpha);
 					CalculateEDR (m_eta, m_delta, m_rho);
 					SetRxSnrVector(rxSnr);

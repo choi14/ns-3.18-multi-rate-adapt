@@ -174,20 +174,21 @@ SbraWifiManager::GroupRateAdaptation ()
 	}
 	else
 	{
-		m_minSnr = (double)m_infos[0].info.Rssi;
+		m_minSnr = (double)m_infos[0].info.Snr;
 		for (uint32_t m = 0; m < vsize; m++)
 		{
-			if(m_minSnr > (double)m_infos[m].info.Rssi)
+			if(m_minSnr > (double)m_infos[m].info.Snr)
 			{
-				m_minSnr = (double)m_infos[m].info.Rssi;
+				m_minSnr = (double)m_infos[m].info.Snr;
 			}
 		}
 		m_sum_min_snr += m_minSnr;
 		NS_LOG_INFO("SNR SUM: " << m_sum_min_snr);
 		uint32_t NBasicMode = GetNBasicModes ();
 		double Pdr = 0.0;
-
-		m_minSnr = std::pow (10.0, m_minSnr/10.0); 
+	
+		NS_LOG_INFO("m_minSnr(dB): " << m_minSnr << " m_minSnr(ratio): " << std::pow(10.0, m_minSnr/10.0)); 
+		m_minSnr = std::pow (10.0, m_minSnr/10.0); // m_minSnr: log->linear
 		if(m_minSnr > 1.0)
 		{
 			// PER-SNR Rate Adaptation
@@ -293,7 +294,10 @@ SbraWifiManager::GroupRateAdaptation ()
 			}
 		}
 		else
+		{
+			NS_LOG_INFO("m_minSnr: " << m_minSnr << " < 1 and selectBasicMode");
 			m_GroupTxMode = GetBasicMode (0);
+		}
 	}
 	return m_GroupTxMode;
 }

@@ -469,7 +469,7 @@ public:
    * This method is typically invoked by the lower PHY layer to notify
    * the MAC layer that a packet was successfully received.
    */
-  void ReceiveOk (Ptr<Packet> packet, double rxSnr, double rssi,  WifiMode txMode, WifiPreamble preamble);
+  void ReceiveOk (Ptr<Packet> packet, double rxSnr, double rxRssi,  WifiMode txMode, WifiPreamble preamble);
   //void ReceiveOk (Ptr<Packet> packet, double rxSnr,  WifiMode txMode, WifiPreamble preamble);
   /**
    * \param packet packet received.
@@ -678,26 +678,37 @@ private:
 	struct rxInfo m_rxInfo;
 	typedef std::vector<double> rxSnrVector;
 	rxSnrVector m_rxSnrVector;
-	rxSnrVector m_sortedVector;
+	rxSnrVector m_sortedSnrVector;
 
+	typedef std::vector<double> rxRssiVector;
+	rxRssiVector m_rxRssiVector;
+	rxRssiVector m_sortedRssiVector;
+	
 	//jychoi
 	void CalculateEwma (double alpha);
 	void CalculateEDR (double eta, double delta, double rho);
 	void SetRxSnrVector (double rxSnr);
 	uint32_t m_rxSnrVectorSize;
 	double m_rxSnr;
+	double m_rxRssi;
 	// type 1 EWMA
 	double m_ewmaSnr;
+	double m_ewmaRssi;
 	double m_alpha;
-	// type 3 RAM
+	// type 3 EDR
 	double m_eta;
 	double m_delta;
 	double m_rho;
+	
 	double m_avgSnr;
-	double m_avgDev;
+	double m_devSnr;
 	double m_estSnr;
 	
-  // Listerner needed to monitor when a channel switching occurs.
+	double m_avgRssi;
+	double m_devRssi;
+	double m_estRssi;
+  
+	// Listerner needed to monitor when a channel switching occurs.
   class PhyMacLowListener * m_phyMacLowListener;
 
   /*

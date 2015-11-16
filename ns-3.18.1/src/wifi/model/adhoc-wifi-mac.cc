@@ -249,19 +249,17 @@ AdhocWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 	}
 	else if (hdr->IsFeedback ())
 	{
-    //Ptr<Packet> originPacket = Create<Packet> ();
-		//originPacket = packet;
 		FeedbackHeader fbhdr;
 		packet->RemoveHeader (fbhdr);
-		m_rxInfoSet.Rssi = fbhdr.GetRssi();
-		m_rxInfoSet.Snr = fbhdr.GetSnr();
+		m_rxInfoSet.Rssi = (int32_t)fbhdr.GetRssi();
+		m_rxInfoSet.Snr = (int32_t)fbhdr.GetSnr();
 		m_rxInfoSet.LossPacket = fbhdr.GetLossPacket();
 		m_rxInfoSet.TotalPacket = fbhdr.GetTotalPacket();
 		
 		Ptr<SbraWifiManager> sbra = DynamicCast<SbraWifiManager> (GetWifiRemoteStationManager());
 		sbra->UpdateInfo(from, m_rxInfoSet);
 
-		NS_LOG_INFO ("[rx feedback packet]" << "Address: " << from << " RSSI: " << m_rxInfoSet.Rssi << " Snr: " << 
+		NS_LOG_INFO ("[rx feedback packet]" << " Address: " << from << " RSSI: " << m_rxInfoSet.Rssi << " Snr: " << 
 				m_rxInfoSet.Snr << " LossPacket: " << m_rxInfoSet.LossPacket << " TotalPacket: " << m_rxInfoSet.TotalPacket);
 	 	return;
 		//ForwardUp (originPacket, from, to);

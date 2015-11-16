@@ -9,8 +9,8 @@ namespace ns3 {
 
 struct rxInfo
 {
-	uint32_t Rssi;
-	uint32_t Snr;
+	int32_t Rssi;
+	int32_t Snr;
 	uint32_t LossPacket;
 	uint32_t TotalPacket;
 };
@@ -25,13 +25,13 @@ public:
   virtual void Serialize (Buffer::Iterator start) const;
   virtual uint32_t Deserialize (Buffer::Iterator start);
 
-	void SetRssi (uint32_t rssi);
-	void SetSnr (uint32_t snr);
+	void SetRssi (int32_t rssi);
+	void SetSnr (int32_t snr);
 	void SetLossPacket (uint32_t lossPacket);
 	void SetTotalPacket (uint32_t totalPacket);
 
-	uint32_t GetRssi (void);
-	uint32_t GetSnr (void);
+	int32_t GetRssi (void);
+	int32_t GetSnr (void);
 	uint32_t GetLossPacket (void);
 	uint32_t GetTotalPacket (void);
 

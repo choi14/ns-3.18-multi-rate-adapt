@@ -67,7 +67,7 @@ main (int argc, char *argv[])
 	uint32_t rxNodeNum = 1;
 	uint32_t seed = 1; // 1:1:100 
 	uint32_t rateAdaptType = 0; // 0 or 1 0-> per over 0.001 1-> maximun throughput 
-	uint32_t feedbackType = 0; // 0, 1, 2
+	uint32_t feedbackType = 3; // 0, 1, 2, 3
 	uint64_t feedbackPeriod = 200; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
 	double bound = 20.0; 

@@ -220,6 +220,19 @@ InterferenceHelper::AppendEvent (Ptr<InterferenceHelper::Event> event)
 
 }
 
+//gjlee
+double
+InterferenceHelper::CalculateRssi (double signal, double noiseInterference, WifiMode mode) const
+{
+  // thermal noise at 290K in J/s = W
+  static const double BOLTZMANN = 1.3803e-23;
+  // Nt is the power of thermal noise in W
+  double Nt = BOLTZMANN * 290.0 * mode.GetBandwidth ();
+  // receiver noise Floor (W) which accounts for thermal noise and non-idealities of the receiver
+  double noiseFloor = m_noiseFigure * Nt;
+	double rssi = (signal + noiseInterference) / noiseFloor;
+  return rssi;
+}
 
 double
 InterferenceHelper::CalculateSnr (double signal, double noiseInterference, WifiMode mode) const
@@ -234,22 +247,7 @@ InterferenceHelper::CalculateSnr (double signal, double noiseInterference, WifiM
   double snr = signal / noise;
 	
 	//jychoi
-	//double snr = signal / noiseFloor;
   return snr;
-}
-
-//gjlee
-double
-InterferenceHelper::CalculateRssi (double signal, double noiseInterference, WifiMode mode) const
-{
-  // thermal noise at 290K in J/s = W
-  static const double BOLTZMANN = 1.3803e-23;
-  // Nt is the power of thermal noise in W
-  double Nt = BOLTZMANN * 290.0 * mode.GetBandwidth ();
-  // receiver noise Floor (W) which accounts for thermal noise and non-idealities of the receiver
-  double noiseFloor = m_noiseFigure * Nt;
-	double rssi = (signal + noiseInterference) / noiseFloor;
-  return rssi;
 }
 
 double

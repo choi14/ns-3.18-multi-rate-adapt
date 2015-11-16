@@ -809,7 +809,7 @@ YansWifiPhy::EndReceive (Ptr<Packet> packet, Ptr<InterferenceHelper::Event> even
       double signalDbm = RatioToDb (event->GetRxPowerW ()) + 30;
       double noiseDbm = RatioToDb (event->GetRxPowerW () / snrPer.snr) - GetRxNoiseFigure () + 30;
       NotifyMonitorSniffRx (packet, (uint16_t)GetChannelFrequencyMhz (), GetChannelNumber (), dataRate500KbpsUnits, isShortPreamble, signalDbm, noiseDbm);
-      m_state->SwitchFromRxEndOk (packet, snrPer.snr, snrPer.rssi, event->GetPayloadMode (), event->GetPreambleType ());
+      m_state->SwitchFromRxEndOk (packet, snrPer.snr, snrPer.rssi, event->GetPayloadMode (), event->GetPreambleType ()); //ycshin
       //m_state->SwitchFromRxEndOk (packet, snrPer.snr, event->GetPayloadMode (), event->GetPreambleType ());
       //m_state->SwitchFromRxEndOk (packet, snrPer.rssi, event->GetPayloadMode (), event->GetPreambleType ()); //gjlee
     }
