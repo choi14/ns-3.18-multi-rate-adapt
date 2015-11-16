@@ -749,6 +749,28 @@ WifiMacHeader::IsMoreFragments (void) const
 {
   return (m_ctrlMoreFrag == 1);
 }
+//ycshin
+bool 
+WifiMacHeader::IsMoreData (void) const
+{
+	return (m_ctrlMoreData ==1);
+}
+void
+WifiMacHeader::SetMoreData (bool md)
+{
+	m_ctrlMoreData = md;
+}
+bool 
+WifiMacHeader::IsWep (void) const
+{
+	return (m_ctrlWep ==1);
+}
+void
+WifiMacHeader::SetWep (bool wep)
+{
+	m_ctrlWep = wep;
+}
+//endy
 bool
 WifiMacHeader::IsQosBlockAck (void) const
 {

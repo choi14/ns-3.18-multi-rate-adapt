@@ -522,7 +522,7 @@ public:
    * associated to this AC.
    */
   void RegisterBlockAckListenerForAc (enum AcIndex ac, MacLowBlockAckEventListener *listener);
-
+  double GetRxSnr(void);
 
 private:
   void CancelAllEvents (void);

@@ -582,6 +582,12 @@ MacLow::CalculateEDR (double eta, double delta, double rho)
 	m_avgDev = (1-rho) * m_avgDev + rho * abs(m_avgSnr-m_rxSnr);
 	m_estSnr = m_avgSnr - eta * m_avgDev; 
 }
+double
+MacLow::GetRxSnr (void)
+{
+		return m_rxSnr;
+}
+
 
 struct rxInfo
 MacLow::GetRxInfo (
@@ -1014,6 +1020,11 @@ MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rssi,  WifiMode txMo
 					CalculateEwma (m_alpha);
 					CalculateEDR (m_eta, m_delta, m_rho);
 					SetRxSnrVector(rxSnr);
+					/*
+      				SnrTag tag;
+					tag.SetSnr(rxSnr);
+			        packet->RemovePacketTag (tag);
+					*/
 					goto rxPacket;
 				}
       else
