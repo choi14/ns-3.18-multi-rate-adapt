@@ -509,6 +509,8 @@ AdhocWifiMac::SetBasicModes(void)
 	m_stationManager->AddBasicMode(WifiMode("OfdmRate36Mbps"));// 9
 	m_stationManager->AddBasicMode(WifiMode("OfdmRate48Mbps"));// 10
 	m_stationManager->AddBasicMode(WifiMode("OfdmRate54Mbps"));// 11
+
+	NS_LOG_UNCOND ("Number of Basic Modes: " << m_stationManager->GetNBasicModes());
 }
 
 
