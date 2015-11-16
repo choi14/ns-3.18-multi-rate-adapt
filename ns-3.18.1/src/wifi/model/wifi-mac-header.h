@@ -154,6 +154,10 @@ public:
   
 	bool IsFeedback (void) const; //jychoi
 	bool IsFromDs (void) const;
+  	bool IsWep (void) const;
+  	void SetWep(bool wep);
+  	bool IsMoreData (void) const;
+  	void SetMoreData(bool md);
   bool IsToDs (void) const;
   bool IsData (void) const;
   bool IsQosData (void) const;

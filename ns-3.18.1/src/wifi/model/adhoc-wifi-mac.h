@@ -24,6 +24,9 @@
 
 #include "regular-wifi-mac.h"
 #include "fb-headers.h"
+#include "online-table-manager.h"
+#include "MNC_codec.h"
+#include "wifi-mac-queue.h"
 
 #include "amsdu-subframe-header.h"
 
@@ -62,12 +65,15 @@ public:
    * access is granted to this MAC.
    */
   virtual void Enqueue (Ptr<const Packet> packet, Mac48Address to);
-
+  void SendTraining(void);
+  void SetBasicModes(void);
 	struct rxInfo m_rxInfoSet;
   struct rxInfo m_rxInfoGet;
 
 private:
   virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
+  void ReceiveTl (Ptr<Packet> packet, Mac48Address from);
+  void ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr);
 	void SendFeedback (void); //jychoi	
 	
 	uint64_t m_feedbackPeriod;
@@ -81,6 +87,24 @@ private:
 	double m_eta;
 	double m_delta;
 	double m_rho;
+	uint32_t m_max;
+	uint32_t m_tf_id;
+	Ptr<OnlineTableManager> m_tableManager;
+
+ 	MNC_Encoder m_MNC_Encoder;
+	typedef std::list<MNC_Decoder> MNC_Decoder_Queue;
+	MNC_Decoder_Queue m_decoder_queue;
+	typedef std::list<MNC_Decoder>::iterator MNC_Decoder_QueueI;
+  	
+	//MNC_Decoder m_MNC_Decoder;
+
+	uint8_t m_mcast_mcs;
+	uint8_t m_burstsize;
+	uint16_t m_src_eid;
+	uint16_t m_last_eid;
+	bool m_nc_enabled;
+	uint8_t m_MNC_K;
+	uint8_t m_MNC_P;
 };
 
 } // namespace ns3

@@ -30,6 +30,7 @@
 #include "ns3/trace-source-accessor.h"
 #include "wifi-mac-header.h"
 #include "wifi-mac-trailer.h"
+#include "rate-tag.h" // GJLEE
 
 NS_LOG_COMPONENT_DEFINE ("WifiRemoteStationManager");
 
@@ -542,9 +543,19 @@ WifiRemoteStationManager::GetDataTxVector (Mac48Address address, const WifiMacHe
 {
   if (address.IsGroup ())
     {
-			//jychoi
+	  //jychoi
+	  //ycshin
+	  RateTag tag;
+	  bool found;
+	  found = ConstCast<Packet> (packet)->RemovePacketTag(tag);
+
       WifiTxVector v;
-      v.SetMode (GetNonUnicastMode ());
+	  if (found){
+			v.SetMode(GetBasicMode(tag.Get()));
+	  }
+	  else{
+      		v.SetMode (GetNonUnicastMode ());
+	  }
       v.SetTxPowerLevel (m_defaultTxPowerLevel);
       v.SetShortGuardInterval (false);
       v.SetNss (1);
