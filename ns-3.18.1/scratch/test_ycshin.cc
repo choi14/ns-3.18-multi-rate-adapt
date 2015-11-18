@@ -166,17 +166,20 @@ main (int argc, char *argv[])
 	txMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 	Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
 	positionAlloc->Add (Vector (0.0, 0.0, 0.0));
+	positionAlloc->Add (Vector (0.0, 15.0, 0.0));
 	txMobility.SetPositionAllocator (positionAlloc);
-  txMobility.Install (txNodes.Get (0));
+    txMobility.Install (txNodes.Get (0));
+	txMobility.Install (rxNodes.Get (0));
 
-  std::stringstream DiscRho;
-	DiscRho << "ns3::UniformRandomVariable[Min=" << 0 << "|Max=" << bound << "]";	//ycshin modified
-	rxMobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
-			"X", StringValue ("0.0"),
-			"Y", StringValue ("0.0"),
-			"Rho", StringValue (DiscRho.str() ));
+    std::stringstream DiscRho;
+	DiscRho << "ns3::UniformRandomVariable[Min=" << -1*bound/2 << "|Max=" << bound/2 << "]";	//ycshin modified
+	rxMobility.SetPositionAllocator ("ns3::RandomRectanglePositionAllocator",
+			"X", StringValue (DiscRho.str()),
+			"Y", StringValue (DiscRho.str()));
 	rxMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  rxMobility.Install (rxNodes);
+
+	for (uint32_t n = 1; n < rxNodes.GetN(); n++)
+	    rxMobility.Install (rxNodes.Get(n));
 	
 	InternetStackHelper stack;
 	stack.Install (txNodes);
@@ -203,7 +206,7 @@ main (int argc, char *argv[])
 	onoff.SetAttribute("OffTime",StringValue("ns3::ConstantRandomVariable[Constant=0]"));
 	onoff.SetAttribute ("PacketSize", UintegerValue(1400));
 	onoff.SetAttribute ("DataRate", StringValue ("2Mbps"));
-	onoff.SetAttribute ("MaxBytes", UintegerValue (0));
+	onoff.SetAttribute ("MaxBytes", UintegerValue (1400*10));
 
 	ApplicationContainer txApp = onoff.Install (txNodes.Get (0));
 
@@ -222,6 +225,10 @@ main (int argc, char *argv[])
 	for (uint32_t i=0; i<allDevice.GetN(); i++){
   		Ptr<WifiNetDevice> dev = allDevice.Get(i)->GetObject<WifiNetDevice> ();
 		Ptr<AdhocWifiMac> mac = dev->GetMac()->GetObject<AdhocWifiMac> ();
+			
+		if (i==1)
+				mac->SetTarget(true);
+
 		Simulator::Schedule (Seconds (i*2), &StartTl, mac);
 	}
 	

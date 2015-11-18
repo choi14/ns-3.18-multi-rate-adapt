@@ -20,15 +20,15 @@ OnlineTableManager::GetTypeId (void)
 			.SetParent<Object> ()
 			.AddConstructor<OnlineTableManager> ()
 			.AddAttribute("Alpha", "alpha value for EWMA",
-							DoubleValue(0.1),
+							DoubleValue(0.9),
 							MakeDoubleAccessor(&OnlineTableManager::alpha),
 							MakeDoubleChecker<double> ())
 			.AddAttribute("SampleType", "0: Time-based 1: Number-based",
-							UintegerValue(0),
+							UintegerValue(1),
 							MakeUintegerAccessor(&OnlineTableManager::m_type),
 							MakeUintegerChecker<uint8_t> ())
 			.AddAttribute("SamplingNum", "Number of samples",
-							UintegerValue(20),
+							UintegerValue(40),
 							MakeUintegerAccessor(&OnlineTableManager::m_sampling_num),
 							MakeUintegerChecker<uint16_t> ())
 			;
@@ -39,8 +39,7 @@ OnlineTableManager::GetTypeId (void)
 OnlineTableManager::OnlineTableManager():
 		m_rssi_cur(0),
 		m_pdr_cur(0),
-		m_mcs_cur(0),
-		sampling_period(MilliSeconds(20))
+		m_mcs_cur(0)
 {
 		m_init = false;
 	 	threshold_high = 0.95;
@@ -49,13 +48,15 @@ OnlineTableManager::OnlineTableManager():
 		m_rcv = 0;
 		m_tot = 0;
 		m_first_seq = 0;
+		m_transition = 2;
 		//m_last_seq = 0;
 		m_training_max = 100;
+		m_min_num_samples = 5;
 
 		sampling_period = Time(MilliSeconds(20));
 		
 		for (uint32_t i = 0; i < 8; i++){
-				for (uint32_t j=0; j < 50; j++){
+				for (uint32_t j=0; j < 30; j++){
 						m_table[i][j].p = 0;
 						m_table[i][j].mark = false;
 						m_correct_table[i][j].p = 0;
@@ -93,8 +94,7 @@ OnlineTableManager::InitialTable (uint16_t seq, uint16_t id, uint8_t mcs, uint32
 			// if (m_tot > theshold){} // to be
 			m_tot = m_training_max - m_first_seq + 1;
 	
-
-			if (m_tot > 10)
+			if (m_tot > m_min_num_samples)
 				RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_tot);
 
 			m_mcs_cur = mcs;
@@ -123,7 +123,7 @@ OnlineTableManager::InitialTable (uint16_t seq, uint16_t id, uint8_t mcs, uint32
 				m_tot = m_sampling_num;
 				
 
-				if (m_tot > 10)
+				if (m_tot > m_min_num_samples)
 					RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_tot);
 				
 				m_rssi_cur = rssi;
@@ -149,7 +149,7 @@ OnlineTableManager::InitialTable (uint16_t seq, uint16_t id, uint8_t mcs, uint32
 		if (m_timeoutEvent.IsRunning())
 			m_timeoutEvent.Cancel();
 		
-			if (m_tot > 10)
+				if (m_tot > m_min_num_samples)
 				RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_tot);
 			
 			m_mcs_cur = mcs;
@@ -173,13 +173,10 @@ OnlineTableManager::SamplingTimeout (void){
 	double pdr = (double)m_rcv / (double)m_tot;
 	uint32_t rssi_avg = m_rssi_cur / m_rcv;
 	
-	NS_LOG_UNCOND("Sampling Timeout Pdr: " << pdr << " Rssi: " << rssi_avg  << " rcv: " << m_rcv << " tot: " << m_tot << " mcs: " << (uint32_t)m_mcs_cur); 
+	NS_LOG_INFO("Sampling Timeout Pdr: " << pdr << " Rssi: " << rssi_avg  << " rcv: " << m_rcv << " tot: " << m_tot << " mcs: " << (uint32_t)m_mcs_cur); 
 	
-	if (m_tot > 10)
+	if (m_tot > m_min_num_samples)
 		RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_tot);
-	
-	if (m_mcs_cur == 7)
-		PrintTable(m_table, std::cout);
 }
 
 void
@@ -190,11 +187,8 @@ OnlineTableManager::RecordSample (uint8_t mcs, uint32_t rssi_sum, uint16_t rcv, 
 	uint32_t rssi_idx = rssi - rssi_min;
 	uint32_t mcs_idx = (uint32_t)mcs;
 
-	if (rssi_idx < 5)
-			NS_LOG_UNCOND("MCS: " << mcs_idx << " IDX: " << rssi_idx <<  " RSSI_SUM: " << rssi_sum << " RCV: " << rcv << " TOT: " << tot);
-
-	if (rssi_idx >= 50){
-			NS_LOG_UNCOND("High RSSI MCS: " << mcs_idx << " IDX: " << rssi_idx <<  " RSSI_SUM: " << rssi_sum << " RCV: " << rcv << " TOT: " << tot);
+	if (rssi_idx >= 30){
+			NS_LOG_INFO("High RSSI MCS: " << mcs_idx << " IDX: " << rssi_idx <<  " RSSI_SUM: " << rssi_sum << " RCV: " << rcv << " TOT: " << tot);
 			return;
 	}
 
@@ -211,25 +205,24 @@ OnlineTableManager::RecordSample (uint8_t mcs, uint32_t rssi_sum, uint16_t rcv, 
 			pdr_cur.p = threshold_high;
 	else if (pdr_cur.p < threshold_low)
 			pdr_cur.p = 0; // To be
-/*	
+	
 	for (uint32_t i = 0; i < rssi_idx; i++){
 		if((m_table[mcs][i]).p > pdr_cur.p && m_table[mcs][i].mark == true){
 			pdr_cur.p = (m_table[mcs][i]).p;
 			break;
 		}
 	}
-*/
 	(m_table[mcs_idx][rssi_idx]).p = pdr_cur.p;
 	(m_table[mcs_idx][rssi_idx]).mark = pdr_cur.mark;
 }
 
 void
-OnlineTableManager::PrintTable(Pdr table[][50], std::ostream &os){
+OnlineTableManager::PrintTable(Pdr table[][30], std::ostream &os){
 	os.precision (2);
 	for (uint32_t i = 0; i < 8; i++){
 		os << "MCS " << i << " Rcv: (";	
-		for (uint32_t j=0; j<50; j++){
-				os << (m_table[i][j]).p << " ";
+		for (uint32_t j=0; j<30; j++){
+				os << (table[i][j]).p << " ";
 		}
 
 		os << ")" << std::endl;
@@ -272,7 +265,7 @@ OnlineTableManager::GenerateCorrectTable(void)
 			double nSymbols = ((databytes+64)*8+22)/coderate/ofdmbits;
 			uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
 
-			for (uint32_t j = 0; j < 50; j++){
+			for (uint32_t j = 0; j < 30; j++){
 					double snr = (double)j + (double)rssi_min;
 					snr = std::pow(10.0, snr/10.0);
 					double pdr = m_phy->CalculatePdr (mode, snr, nbits);
@@ -284,7 +277,7 @@ OnlineTableManager::GenerateCorrectTable(void)
 			}
 		}
 		
-		PrintTable(m_correct_table, std::cout);
+//		PrintTable(m_correct_table, std::cout);
 }
 
 void 
@@ -297,6 +290,152 @@ OnlineTableManager::SetPhy(Ptr<WifiPhy> phy)
 {
 	m_phy = phy;
 }
+
+void
+OnlineTableManager::PrintOnlineTable(std::ostream &os){
+	PrintTable(m_table, os);
+}
+
+void
+OnlineTableManager::FillingBlank(void){
+		uint32_t snr_edge = 0;
+
+		PrintOnlineTable(std::cout);
+		
+		std::cout << " After Filling " << std::endl;
+		for (uint32_t i = 0; i < 8; i++){
+				uint32_t mcs_idx = 7-i;
+
+				uint32_t snr_low_id = 0;
+				double snr_low_value = 1;
+				uint32_t snr_high_id = 0;
+				double snr_high_value =0;
+
+				bool no_low = true;
+				bool no_high = true;
+
+				for (uint32_t j=0; j < 30; j++){
+						double pdr = m_table[mcs_idx][j].p;
+						bool mark = m_table[mcs_idx][j].mark;
+
+						if (mark == true && pdr == threshold_low){
+								no_low = false;
+						}
+
+						if (mark == true && pdr <= snr_low_value){
+								snr_low_id = j;
+								snr_low_value = pdr;
+						}
+						
+						if (mark == true && pdr > snr_high_value){
+								if (snr_high_value != 0){
+										for (uint32_t k = snr_high_id + 1; k < j; k++){
+												m_table[mcs_idx][k].p = snr_high_value +(double)(k-snr_high_id)*(pdr - snr_high_value)/(double)(j-snr_high_id);
+										}
+								}
+								snr_high_value = pdr;
+								snr_high_id = j;
+						}
+						if (mark == true && pdr == threshold_high){
+							//NS_LOG_UNCOND("ID: " << j);
+							for (uint32_t k = j+1; k < 30; k++){
+								m_table[mcs_idx][k].p = threshold_high;
+							}
+							snr_high_value = pdr;
+							snr_high_id = j;
+							
+							no_high = false;
+							break;
+						}
+				}
+				if (no_low == true && no_high == true){
+						NS_LOG_UNCOND("MCS: " << mcs_idx << " High ID: " << snr_high_id << " Low ID: " << snr_low_id); 
+						if (snr_low_id == snr_high_id){
+							if (snr_high_id == 0)
+									continue;
+
+							NS_LOG_INFO("Single sample");
+								
+							for (int k = (int)snr_high_id; k >= 0; k--){
+								m_table[mcs_idx][k].p = snr_high_value - (double)(snr_high_id-k)*(threshold_high /(double)m_transition);
+								if (m_table[mcs_idx][k].p < threshold_low){
+										m_table[mcs_idx][k].p = 0;
+										break;
+								}
+							}
+							
+							for (int k = (int)snr_high_id; k < 30; k++){
+								m_table[mcs_idx][k].p = snr_high_value + (double)(k - snr_high_id)*(threshold_high /(double)m_transition);
+								if (m_table[mcs_idx][k].p >= threshold_high){
+										m_table[mcs_idx][k].p = threshold_high;
+								}
+							}
+						}
+
+						else{
+							double slope = (snr_high_value - snr_low_value) / (snr_high_id - snr_low_id);
+
+							for (uint32_t k = 0; k < snr_low_id; k++){
+									if ( k + m_transition < snr_low_id )
+											m_table[mcs_idx][k].p = 0;
+									else{
+											m_table[mcs_idx][k].p = snr_low_value - (double)(snr_low_id-k)*slope;
+											if (m_table[mcs_idx][k].p < threshold_low){
+													m_table[mcs_idx][k].p = 0;
+											}
+									}
+							}
+							
+							for (uint32_t k = snr_high_id+1; k < 30; k++){
+								m_table[mcs_idx][k].p = snr_high_value + (double)(k - snr_high_id)*slope;
+								if (m_table[mcs_idx][k].p >= threshold_high){
+										m_table[mcs_idx][k].p = threshold_high;
+								}
+							}
+						}
+				}
+				else if (no_low == true){
+						//NS_LOG_UNCOND("MCS: " << mcs_idx << " High ID: " << snr_high_id << " Low ID: " << snr_low_id); 
+						double slope = 0;
+						if (snr_high_id == snr_low_id){
+							if (snr_edge == 0){
+									snr_edge = snr_high_id;
+							}
+							else{
+									if (snr_high_id >= snr_edge){
+										for (uint32_t k=snr_edge-1; k < snr_high_id;	k++){
+											m_table[mcs_idx][k].p = threshold_high;
+										}
+										snr_high_id = snr_edge-1;
+										snr_low_id = snr_edge-1;
+										snr_edge = snr_high_id;
+									}
+							}
+
+							slope = threshold_high / (double)m_transition;
+						}
+						else{
+							slope = (snr_high_value - snr_low_value) / (double)(snr_high_id - snr_low_id);
+						}
+						
+						for (uint32_t k = snr_low_id - m_transition; k < snr_low_id; k++){
+								m_table[mcs_idx][k].p = snr_low_value - (double)(snr_low_id-k)*slope;
+								if (m_table[mcs_idx][k].p < threshold_low){
+										m_table[mcs_idx][k].p = 0;
+								}
+						}
+				}
+				else if (no_high == true){
+
+				}
+
+		}
+
+		PrintOnlineTable(std::cout);
+}
+
+
+
 
 
 

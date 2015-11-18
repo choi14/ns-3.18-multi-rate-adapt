@@ -98,6 +98,11 @@ AdhocWifiMac::GetTypeId (void)
 				DoubleValue (0.1),
 				MakeDoubleAccessor (&AdhocWifiMac::m_rho),
 				MakeDoubleChecker<double> ())
+		.AddAttribute ("NumTraining", "Number of training packets per mcs", 
+				UintegerValue(100),
+				MakeUintegerAccessor (&AdhocWifiMac::m_max),
+				MakeUintegerChecker<uint16_t> ())
+
   ;
   return tid;
 }
@@ -110,7 +115,6 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_low->SetAlpha(m_alpha);
 	m_low->SetEDR(m_eta, m_delta, m_rho);
 	
-	m_max = 100;
 	m_tf_id = 0;
 	m_nc_enabled = true;
 	m_mcast_mcs = 0;
@@ -119,6 +123,7 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_last_eid = 0;
   	m_MNC_K = 10;
   	m_MNC_P = 1;
+	target = false;
 
   	m_tableManager = CreateObject<OnlineTableManager> ();
 	
@@ -128,7 +133,10 @@ AdhocWifiMac::AdhocWifiMac ()
 
 AdhocWifiMac::~AdhocWifiMac ()
 {
+//	m_tableManager->PrintOnlineTable(std::cout);
   NS_LOG_FUNCTION (this);
+	if (target)
+		m_tableManager->FillingBlank();
 }
 
 void
@@ -518,6 +526,10 @@ AdhocWifiMac::SetBasicModes(void)
 	m_tableManager->GenerateCorrectTable();
 }
 
+void
+AdhocWifiMac::SetTarget(bool t){
+		target = t;
+}
 
 
 
