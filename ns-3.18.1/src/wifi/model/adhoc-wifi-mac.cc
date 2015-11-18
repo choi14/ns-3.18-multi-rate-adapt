@@ -68,6 +68,16 @@ AdhocWifiMac::GetTypeId (void)
 				UintegerValue (100),
 				MakeUintegerAccessor (&AdhocWifiMac::m_feedbackPeriod),
 				MakeUintegerChecker<uint64_t> ())
+		.AddAttribute ("RateAdaptType",
+				"Type of rate adaptation",
+				UintegerValue (0),
+				MakeUintegerAccessor (&AdhocWifiMac::m_ratype),
+				MakeUintegerChecker<uint32_t> ())
+		.AddAttribute ("PerThreshold",
+				"The maximum Packet Error Rate acceptable at any transmission mode",
+				DoubleValue (0.001),
+				MakeDoubleAccessor (&AdhocWifiMac::m_per),
+				MakeDoubleChecker<double> ())
 		.AddAttribute ("Alpha",
 				"weighting factor of EWMA",
 				DoubleValue (0.5),
@@ -85,7 +95,7 @@ AdhocWifiMac::GetTypeId (void)
 				MakeDoubleChecker<double> ())
 		.AddAttribute ("Eta",
 				"eta",
-				DoubleValue (0.1),
+				DoubleValue (1.0),
 				MakeDoubleAccessor (&AdhocWifiMac::m_eta),
 				MakeDoubleChecker<double> ())
 		.AddAttribute ("Delta",
@@ -104,13 +114,12 @@ AdhocWifiMac::GetTypeId (void)
 
 AdhocWifiMac::AdhocWifiMac ()
 {
-  	NS_LOG_FUNCTION (this);
+	NS_LOG_FUNCTION (this);
 	m_initialize = false;
 	m_setMacLowValue = false;
 	m_feedbackPeriod = 100;
-	m_low->SetAlpha(m_alpha);
-	m_low->SetEDR(m_eta, m_delta, m_rho);
-	
+	m_addBasicModes = 0;
+	m_minSnr = 0.0;
 	m_max = 100;
 	m_tf_id = 0;
 	m_nc_enabled = true;
@@ -118,12 +127,13 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_burstsize = 20;
 	m_src_eid = 0;
 	m_last_eid = 0;
-  	m_MNC_K = 10;
-  	m_MNC_P = 1;
+	m_MNC_K = 10;
+	m_MNC_P = 1;
+	m_k = 10;	
 
-  	m_tableManager = CreateObject<OnlineTableManager> ();
-	
-  // Let the lower layers know that we are acting in an IBSS
+	m_tableManager = CreateObject<OnlineTableManager> ();
+
+	// Let the lower layers know that we are acting in an IBSS
   SetTypeOfStation (ADHOC_STA);
 }
 
@@ -223,7 +233,7 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 								  WifiMacHeader temphdr;
 								  Ptr<const Packet> encoded_packet = m_MNC_Encoder.MNC_Dequeue(&temphdr);
 
-								  RateTag tag(m_mcast_mcs);
+								  RateTag tag(m_mcast_mcs); // mcs
 								  ConstCast<Packet> (encoded_packet)->AddPacketTag(tag);
 								  if(m_qosSupported){
 										  NS_ASSERT (tid < 8);
@@ -267,6 +277,30 @@ AdhocWifiMac::SetLinkUpCallback (Callback<void> linkUp)
 }
 
 void
+AdhocWifiMac::UpdateInfo (Mac48Address addr, struct rxInfo info)
+{
+	bool exist = false;
+	for (uint32_t i = 0; i < m_infos.size(); i++)
+	{
+		if (m_infos[i].addr == addr){
+			exist = true;
+			m_infos[i].info = info;
+			break;
+		}
+	}
+	if (exist == false)
+	{
+		StaInfo stainfo;
+		stainfo.addr = addr;
+		stainfo.info = info;
+		m_infos.push_back(stainfo);
+	}
+	for (uint32_t i = 0; i < m_infos.size(); i++){
+		NS_LOG_ERROR("Addr " << m_infos[i].addr); 
+	}
+}
+
+void
 AdhocWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 {
   NS_LOG_FUNCTION (this << packet << hdr);
@@ -277,22 +311,22 @@ AdhocWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 
   if (hdr->IsFeedback ())
   {
-		  //Ptr<Packet> originPacket = Create<Packet> ();
-		  //originPacket = packet;
 		  FeedbackHeader fbhdr;
 		  packet->RemoveHeader (fbhdr);
-		  m_rxInfoSet.Rssi = (int32_t)fbhdr.GetRssi();
-		  m_rxInfoSet.Snr = (int32_t)fbhdr.GetSnr();
+		  m_rxInfoSet.Rssi = fbhdr.GetRssi();
+		  m_rxInfoSet.Snr = fbhdr.GetSnr();
 		  m_rxInfoSet.LossPacket = fbhdr.GetLossPacket();
 		  m_rxInfoSet.TotalPacket = fbhdr.GetTotalPacket();
 
-		  Ptr<SbraWifiManager> sbra = DynamicCast<SbraWifiManager> (GetWifiRemoteStationManager());
-		  sbra->UpdateInfo(from, m_rxInfoSet);
+		  NS_LOG_INFO ("[rx feedback packet]" << " Address: " << to << " RSSI: " << m_rxInfoSet.Rssi
+					<< " Snr: " << m_rxInfoSet.Snr << " LossPacket: " 
+					<< m_rxInfoSet.LossPacket << " TotalPacket: " << m_rxInfoSet.TotalPacket);
+			
+			// GroupRate
+		  UpdateInfo(from, m_rxInfoSet);
+			m_mcast_mcs = GroupRateAdaptation ();
 
-		  NS_LOG_INFO ("[rx feedback packet]" << "Address: " << from << " RSSI: " << m_rxInfoSet.Rssi << " Snr: " << 
-						  m_rxInfoSet.Snr << " LossPacket: " << m_rxInfoSet.LossPacket << " TotalPacket: " << m_rxInfoSet.TotalPacket);
 		  return;
-		  //ForwardUp (originPacket, from, to);
   }
   
   if (hdr->IsData ())
@@ -330,8 +364,6 @@ AdhocWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 		  return;
   }
 
-
-
 	// Invoke the receive handler of our parent class to deal with any
   // other frames. Specifically, this will handle Block Ack-related
   // Management Action frames.
@@ -351,8 +383,7 @@ AdhocWifiMac::SendFeedback ()
   hdr.SetAddr3 (GetBssid ());
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
-  // Set alpha
-	// m_low -> SetAlpha (m_alpha);
+	
 	m_rxInfoGet = m_low->GetRxInfo (m_fbtype, m_percentile, m_alpha, m_beta, m_eta, m_delta, m_rho);
   Ptr<Packet> packet = Create<Packet> ();
   FeedbackHeader FeedbackHdr; // Set RSSI, SNR, txPacket, TotalPacket
@@ -362,14 +393,161 @@ AdhocWifiMac::SendFeedback ()
   FeedbackHdr.SetTotalPacket (m_rxInfoGet.TotalPacket);
 	packet->AddHeader (FeedbackHdr);
 
-	NS_LOG_INFO ("[tx feedback packet]" << " RSSI: " << m_rxInfoGet.Rssi << " Snr: " << m_rxInfoGet.Snr <<
+	NS_LOG_INFO ("[tx feedback packet]" << " Address " << m_low->GetAddress () << " RSSI: " << m_rxInfoGet.Rssi << " Snr: " << m_rxInfoGet.Snr <<
 			" LossPacket: " << m_rxInfoGet.LossPacket << " TotalPacket: " << m_rxInfoGet.TotalPacket);
   m_dca->Queue (packet, hdr);
   Simulator::Schedule (MilliSeconds(m_feedbackPeriod), &AdhocWifiMac::SendFeedback, this);
 }
 
+uint8_t
+AdhocWifiMac::GroupRateAdaptation ()
+{
+	if (m_addBasicModes == 0)
+	{
+		SetBasicModes ();
+		m_addBasicModes = 1;
+	}
+
+	uint32_t vsize = m_infos.size();
+	NS_LOG_INFO("vsize: " << vsize);
+
+	if(vsize == 0)
+	{
+		m_GroupTxMcs = 0;
+	}
+	else
+	{
+		m_minSnr = (double)m_infos[0].info.Snr;
+		NS_LOG_INFO("m_infos[0].info.Snr: " << m_infos[0].info.Snr);
+		for (uint32_t m = 0; m < vsize; m++)
+		{
+			if(m_minSnr > (double)m_infos[m].info.Snr)
+			{
+				m_minSnr = (double)m_infos[m].info.Snr;
+			}
+		}
+		NS_LOG_INFO("m_minSnr(dB): " << m_minSnr <<
+				" m_minSnr(ratio): " << std::pow(10.0, m_minSnr/10.0)); 
+		m_minSnr = std::pow (10.0, m_minSnr/10.0); // m_minSnr: log->linear
+
+		if(m_minSnr > 1.0)
+		{
+			uint32_t NBasicMode = m_stationManager->GetNBasicModes ();
+			uint16_t finalPdr = 0;
+			double Per = 1;
+			double Pdr = 0.0;
+			double maxPdrRate = 0.0;
+			double PdrRate = 0.0;
+			double Rate = 0.0;
+
+			for (uint32_t k = 0; k < NBasicMode; k++)
+			{
+				WifiMode mode = m_stationManager->GetBasicMode(k);
+
+				double coderate = 1.0;
+				if(mode.GetCodeRate () == WIFI_CODE_RATE_3_4)
+					coderate = 3.0/4.0;
+				else if(mode.GetCodeRate () == WIFI_CODE_RATE_2_3)
+					coderate = 2.0/3.0;
+				else if(mode.GetCodeRate () == WIFI_CODE_RATE_1_2)
+					coderate = 1.0/2.0;
+				else if(mode.GetCodeRate () == WIFI_CODE_RATE_5_6)
+					coderate = 5.0/6.0;
+
+				uint32_t ofdmbits = 48; // Coded bits per OFDM symbols
+				if(mode.GetPhyRate () == 12000000)
+					ofdmbits = 48;
+				else if(mode.GetPhyRate () == 24000000)
+					ofdmbits = 96;
+				else if(mode.GetPhyRate () == 48000000)
+					ofdmbits = 192;
+				else if(mode.GetPhyRate () == 72000000)
+					ofdmbits = 288;
+
+				uint32_t databits = 1000;
+				double nSymbols = ((databits+64)*8+22)/coderate/ofdmbits;
+				uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
+
+				// PER-SNR Rate Adaptation
+				if(m_ratype == 0)
+				{
+					Pdr = m_phy->CalculatePdr (mode, m_minSnr, nbits);
+					double tempPer = 1-Pdr;
+					NS_LOG_INFO("mode: " << mode.GetDataRate ()*0.000001 << " tempPer: " << tempPer);
+					if(tempPer < m_per)
+					{
+						m_GroupTxMode = mode;
+						Per = tempPer;
+					}
+
+					if (Per == 1)
+						m_GroupTxMcs = 0;
+					else if (Per > 1)
+						NS_LOG_ERROR("Never happen");
+				}//m_ratype == 0
+
+				// Throughput-SNR Rate Adaptation
+				else if (m_ratype == 1)
+				{
+					Pdr = m_phy->CalculatePdr (mode, m_minSnr, nbits);
+					Rate = mode.GetDataRate();
+					PdrRate = Pdr*Rate*0.000001;
+
+					if (PdrRate > maxPdrRate)
+					{
+						m_GroupTxMode = mode;
+						maxPdrRate = PdrRate;
+						Per = 1-Pdr;
+					}
+					if (maxPdrRate == 0)
+						m_GroupTxMcs = 0;
+					else if (maxPdrRate < 0)
+						NS_LOG_ERROR("Never happen");
+				}//m_ratype==1
+			} // for - NBasicMode
+			
+			finalPdr = (1-Per)*100;
+			m_burstsize = KtoNTable[m_k-1][finalPdr];
+			NS_LOG_INFO("Per: " << Per << " finalPdr: " << finalPdr);
+			NS_LOG_INFO("m_burstsize: " << (uint32_t)m_burstsize << " m_n: " << (uint32_t)KtoNTable[9][99]);
+		
+			m_burstsize = 20;
+			int tmpGroupTxMode = m_GroupTxMode.GetDataRate()*0.000001;
+			switch (tmpGroupTxMode)
+			{
+				case 6:
+					m_GroupTxMcs = 0;	break;
+				case 9:
+					m_GroupTxMcs = 1;	break;
+				case 12:
+					m_GroupTxMcs = 2;	break;
+				case 18:
+					m_GroupTxMcs = 3;	break;
+				case 24:
+					m_GroupTxMcs = 4;	break;
+				case 36:
+					m_GroupTxMcs = 5;	break;
+				case 48:
+					m_GroupTxMcs = 6; break;
+				case 54:
+					m_GroupTxMcs = 7;	break;
+			}
+			NS_LOG_INFO ("m_minSnr: " << m_minSnr
+					<< " GroupTxDataRate: " <<  m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s"
+					<< " GroupTxMcs: " << m_GroupTxMcs);
+		} // if m_minSnr > 1
+		else
+		{
+			NS_LOG_INFO("m_minSnr: " << m_minSnr << " < 1 and selectBasicMode");
+			m_GroupTxMcs = 0;
+		}
+	} // vsize != 0
+	return m_GroupTxMcs;
+}
+
 void
-AdhocWifiMac::SendTraining(void){
+AdhocWifiMac::SendTraining(void)
+{
 	NS_LOG_FUNCTION (this << m_max);
 	NS_LOG_INFO("Send Training " << m_low->GetAddress());
 	WifiMacHeader hdr;
@@ -506,7 +684,6 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 		}
 }
 
-
 void
 AdhocWifiMac::SetBasicModes(void)
 {
@@ -525,9 +702,5 @@ AdhocWifiMac::SetBasicModes(void)
 	m_tableManager->SetPhy(m_phy);
 	m_tableManager->GenerateCorrectTable();
 }
-
-
-
-
 
 } // namespace ns3

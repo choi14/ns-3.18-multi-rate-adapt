@@ -10,10 +10,6 @@
 
 namespace ns3 {
 
-typedef struct{
-	Mac48Address addr;
- 	struct rxInfo info;	
-}StaInfo;
 
 class SbraWifiManager : public WifiRemoteStationManager
 {
@@ -21,21 +17,9 @@ public:
   static TypeId GetTypeId (void);
   SbraWifiManager ();
   virtual ~SbraWifiManager ();
-
-	double GetAvgMinSnrDb (void);
-	double GetAvgTxMode (void);
-	double GetAvgTxMcs (void);
-	
-  void UpdateInfo(Mac48Address addr, struct rxInfo info);
-	
   virtual void SetupPhy (Ptr<WifiPhy> phy);
 
 private:
- 	// jychoi
-	virtual WifiMode DoGroupRateAdaptation (void);
-	void AddOfdmRate (void); 
-	WifiMode GroupRateAdaptation (void);
- 
 	// overriden from base class
   virtual WifiRemoteStation* DoCreateStation (void) const;
 	virtual void DoReportRxOk (WifiRemoteStation *station,
@@ -62,23 +46,6 @@ private:
   Thresholds m_thresholds;
 	double m_ber;
 	Ptr<WifiPhy> m_phy;
-	
-	//jychoi
-	typedef std::vector<Mac48Address> macAddress;
-	typedef std::vector<double> GroupRxSnr;
-	std::vector<StaInfo> m_infos;
-	WifiMode m_GroupTxMode;
-	macAddress m_macAddress;
-	GroupRxSnr m_GroupRxSnr;
-	uint32_t m_type;
-	uint32_t m_num;
-	uint32_t m_GroupTxMcs;
-	double m_sum_min_snr;
-	double m_sum_tx_mode;
-	double m_sum_tx_mcs;
-	double m_minSnr;
-	double m_per;
-	bool m_addBasicMode;
 };
 
 } // namespace ns3

@@ -23,13 +23,13 @@ double ccatime = 0;
 double switchtime = 0;
 
 double start_time = 20;
-
+/*
 static void StartTl(Ptr<AdhocWifiMac> mac)
 {
 	 mac->SetBasicModes();
 	 mac->SendTraining();
 }
-
+*/
 
 static void
 StateLog (std::string context, Time start, Time duration,enum WifiPhy::State state ){
@@ -218,13 +218,14 @@ main (int argc, char *argv[])
 	rxApp.Get (0)->TraceConnectWithoutContext ("Rx", MakeCallback (&RxData));
 	rxDevice.Get(0)->GetObject<WifiNetDevice>()->GetPhy()->TraceConnectWithoutContext("PhyRxDrop", MakeCallback(&RxDrop));
 	rxDevice.Get(0)->GetObject<WifiNetDevice>()->GetPhy()->TraceConnectWithoutContext("PhyRxEnd", MakeCallback(&RxNum));
-	
+/*	
 	for (uint32_t i=0; i<allDevice.GetN(); i++){
   		Ptr<WifiNetDevice> dev = allDevice.Get(i)->GetObject<WifiNetDevice> ();
 		Ptr<AdhocWifiMac> mac = dev->GetMac()->GetObject<AdhocWifiMac> ();
 		Simulator::Schedule (Seconds (i*2), &StartTl, mac);
 	}
-	
+*/
+
 	//wifiPhy.EnablePcapAll ("multicast-test");
 
 	std::ostringstream path1;
@@ -288,7 +289,6 @@ main (int argc, char *argv[])
 	Ptr<SbraWifiManager> sbraWifi = DynamicCast<SbraWifiManager>(txRegMac->GetWifiRemoteStationManager());
 
 	NS_LOG_UNCOND("AirTime: " << airtime);
-	NS_LOG_UNCOND("AvgMinSnr(dB): " <<sbraWifi->GetAvgMinSnrDb());
 	
 //	fout << "AirTime: " << airtime << std::endl;
 //	fout << "AvgMinSnr: " << sbraWifi->GetAvgMinSnrDb () << std::endl;

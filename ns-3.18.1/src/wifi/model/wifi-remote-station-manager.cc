@@ -549,7 +549,7 @@ WifiRemoteStationManager::GetDataTxVector (Mac48Address address, const WifiMacHe
 	  bool found;
 	  found = ConstCast<Packet> (packet)->RemovePacketTag(tag);
 
-      WifiTxVector v;
+    WifiTxVector v;
 	  if (found){
 			v.SetMode(GetBasicMode(tag.Get()));
 	  }
@@ -1305,16 +1305,8 @@ WifiRemoteStationManager::GetBasicMcs (uint32_t i) const
   return m_bssBasicMcsSet[i];
 }
 
-// jychoi
 WifiMode
 WifiRemoteStationManager::GetNonUnicastMode (void)
-{
-	return DoGroupRateAdaptation ();
-}
-
-// jychoi
-WifiMode
-WifiRemoteStationManager::DoGroupRateAdaptation (void)
 {
   if (m_nonUnicastMode == WifiMode ())
     {

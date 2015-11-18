@@ -7,7 +7,7 @@
 #include "ns3/log.h"
 #define Min(a,b) ((a < b) ? a : b)
 
-//jychoi
+/*jychoi
 #include <ostream>
 #include <vector>
 #include "ns3/node.h"
@@ -16,6 +16,7 @@
 #include "ns3/wifi-net-device.h"
 #include "ns3/wifi-mac.h"
 #include "ns3/regular-wifi-mac.h"
+*/
 
 NS_LOG_COMPONENT_DEFINE("SbraWifiManager");
 
@@ -32,40 +33,25 @@ TypeId
 SbraWifiManager::GetTypeId (void)
 {
 	static TypeId tid = TypeId ("ns3::SbraWifiManager")
-				.SetParent<WifiRemoteStationManager> ()
-				.AddConstructor<SbraWifiManager> ()
-				.AddAttribute ("BerThreshold",
-						"The maximum Bit Error Rate acceptable at any transmission mode",
-						DoubleValue (10e-6),
-						MakeDoubleAccessor (&SbraWifiManager::m_ber),
-						MakeDoubleChecker<double> ())
-				.AddAttribute ("Type",
-						"Type of rate adaptation",
-						UintegerValue (0),
-						MakeUintegerAccessor (&SbraWifiManager::m_type),
-						MakeUintegerChecker<uint32_t> ())
-				.AddAttribute ("PerThreshold",
-						"The maximum Bit Error Rate acceptable at any transmission mode",
-						DoubleValue (0.001),
-						MakeDoubleAccessor (&SbraWifiManager::m_per),
-						MakeDoubleChecker<double> ())
-				;
-			return tid;
+		.SetParent<WifiRemoteStationManager> ()
+		.AddConstructor<SbraWifiManager> ()
+		.AddAttribute ("BerThreshold",
+				"The maximum Bit Error Rate acceptable at any transmission mode",
+				DoubleValue (10e-6),
+				MakeDoubleAccessor (&SbraWifiManager::m_ber),
+				MakeDoubleChecker<double> ())
+		;
+	return tid;
 }
 
 SbraWifiManager::SbraWifiManager ()
 {
-	m_addBasicMode = false;
-	m_num = 0;
-	m_sum_min_snr = 0;
-	m_sum_tx_mode = 0;
-	m_sum_tx_mcs = 0;
 }
 SbraWifiManager::~SbraWifiManager ()
 {
 }
 
-	void
+void
 SbraWifiManager::SetupPhy (Ptr<WifiPhy> phy)
 {
   uint32_t nModes = phy->GetNModes ();
@@ -142,165 +128,7 @@ void
 SbraWifiManager::DoReportFinalDataFailed (WifiRemoteStation *station)
 {
 }
-void
-SbraWifiManager::AddOfdmRate (void)
-{
-	AddBasicMode(WifiMode("OfdmRate6Mbps"));
-	AddBasicMode(WifiMode("OfdmRate9Mbps"));
-	AddBasicMode(WifiMode("OfdmRate12Mbps"));
-	AddBasicMode(WifiMode("OfdmRate18Mbps"));
-	AddBasicMode(WifiMode("OfdmRate24Mbps"));
-	AddBasicMode(WifiMode("OfdmRate36Mbps"));
-	AddBasicMode(WifiMode("OfdmRate48Mbps"));
-	AddBasicMode(WifiMode("OfdmRate54Mbps"));
-	m_addBasicMode = true;
-}
-WifiMode
-SbraWifiManager::DoGroupRateAdaptation ()
-{
-		return GroupRateAdaptation();
-}
-WifiMode
-SbraWifiManager::GroupRateAdaptation ()
-{
-	if (m_addBasicMode == false)
-		AddOfdmRate ();
-	
-	uint32_t vsize = m_infos.size();
-	NS_LOG_INFO("vsize: " << vsize);
-	if(vsize == 0)
-	{
-		m_GroupTxMode = GetBasicMode (0);
-	}
-	else
-	{
-		m_minSnr = (double)m_infos[0].info.Snr;
-		for (uint32_t m = 0; m < vsize; m++)
-		{
-			if(m_minSnr > (double)m_infos[m].info.Snr)
-			{
-				m_minSnr = (double)m_infos[m].info.Snr;
-			}
-		}
-		m_sum_min_snr += m_minSnr;
-		NS_LOG_INFO("SNR SUM: " << m_sum_min_snr);
-		uint32_t NBasicMode = GetNBasicModes ();
-		double Pdr = 0.0;
-	
-		NS_LOG_INFO("m_minSnr(dB): " << m_minSnr << " m_minSnr(ratio): " << std::pow(10.0, m_minSnr/10.0)); 
-		m_minSnr = std::pow (10.0, m_minSnr/10.0); // m_minSnr: log->linear
-		if(m_minSnr > 1.0)
-		{
-			// PER-SNR Rate Adaptation
-			if(m_type == 0)
-			{
-				double Per = 1;
-				for (uint32_t k = 0; k < NBasicMode; k++)
-				{
-					WifiMode mode = GetBasicMode(k);
-					
-					double coderate = 1.0;
-					if(mode.GetCodeRate () == WIFI_CODE_RATE_3_4)
-						coderate = 3.0/4.0;
-					else if(mode.GetCodeRate () == WIFI_CODE_RATE_2_3)
-						coderate = 2.0/3.0;
-					else if(mode.GetCodeRate () == WIFI_CODE_RATE_1_2)
-						coderate = 1.0/2.0;
-					else if(mode.GetCodeRate () == WIFI_CODE_RATE_5_6)
-						coderate = 5.0/6.0;
-					
-					uint32_t ofdmbits = 48; // Coded bits per OFDM symbols
-					if(mode.GetPhyRate () == 12000000)
-						ofdmbits = 48;
-					else if(mode.GetPhyRate () == 24000000)
-						ofdmbits = 96;
-					else if(mode.GetPhyRate () == 48000000)
-						ofdmbits = 192;
-					else if(mode.GetPhyRate () == 72000000)
-						ofdmbits = 288;
-					
-					uint32_t databits = 1000;
-					double nSymbols = ((databits+64)*8+22)/coderate/ofdmbits;
-					uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
 
-					Pdr = m_phy->CalculatePdr (mode, m_minSnr, nbits);
-					double tempPer = 1-Pdr;
-					if(tempPer < m_per)
-					{
-						m_GroupTxMode = mode;
-						Per=tempPer;
-					}
-				}
-				if (Per > 1)
-					NS_ASSERT("Never happen");
-				else if (Per == 1)
-					m_GroupTxMode = GetBasicMode (0);
-
-				int tmpGroupTxMode = m_GroupTxMode.GetDataRate()*0.000001;
-
-				NS_LOG_INFO("tmpGroupTxMode: " << tmpGroupTxMode);
-				switch (tmpGroupTxMode)
-				{
-					case 6:
-						m_GroupTxMcs = 0;	break;
-					case 9:
-						m_GroupTxMcs = 1;	break;
-					case 12:
-						m_GroupTxMcs = 2;	break;
-					case 18:
-						m_GroupTxMcs = 3;	break;
-					case 24:
-						m_GroupTxMcs = 4;	break;
-					case 36:
-						m_GroupTxMcs = 5;	break;
-					case 48:
-						m_GroupTxMcs = 6; break;
-					case 54:
-						m_GroupTxMcs = 7;	break;
-				}
-
-				m_sum_tx_mode += m_GroupTxMode.GetDataRate() * 0.000001;
-				m_sum_tx_mcs += m_GroupTxMcs;
-				m_num++;
-				
-				NS_LOG_INFO ("m_minSnr: " << m_minSnr << " GroupTxDataRate: " <<  m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s" << " GroupTxMcs: " << m_GroupTxMcs);
-			}
-
-			// Throughput-SNR Rate Adaptation
-			else if (m_type == 1)
-			{
-				double maxPdrRate = 0.0;
-				double PdrRate = 0.0;
-				double Rate = 0.0;
-				for (uint32_t k = 0; k < NBasicMode; k++)
-				{
-					WifiMode mode = GetBasicMode(k);
-					NS_LOG_INFO("mode = "<<GetBasicMode(k).GetDataRate() );
-					Pdr = m_phy->CalculatePdr (mode, m_minSnr, 1086*8);
-					Rate = mode.GetDataRate();
-					PdrRate = Pdr*Rate*0.000001;
-
-					if (PdrRate > maxPdrRate)
-					{
-						maxPdrRate = PdrRate;
-						m_GroupTxMode = mode;
-					}
-				}
-				if (maxPdrRate == 0)
-					m_GroupTxMode = GetBasicMode (0);
-				
-				NS_LOG_INFO("SNR: "<< m_minSnr <<" GroupTxDataRate: "<< 
-						m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s");
-			}
-		}
-		else
-		{
-			NS_LOG_INFO("m_minSnr: " << m_minSnr << " < 1 and selectBasicMode");
-			m_GroupTxMode = GetBasicMode (0);
-		}
-	}
-	return m_GroupTxMode;
-}
 WifiTxVector
 SbraWifiManager::DoGetDataTxVector (WifiRemoteStation *st, uint32_t size)
 {
@@ -355,58 +183,10 @@ SbraWifiManager::DoGetRtsTxVector (WifiRemoteStation *st)
   return WifiTxVector (maxMode, GetDefaultTxPowerLevel (), GetShortRetryCount (station), GetShortGuardInterval (station), Min (GetNumberOfReceiveAntennas (station),GetNumberOfTransmitAntennas()), GetNumberOfTransmitAntennas (station), GetStbc (station));
 }
 
-void
-SbraWifiManager::UpdateInfo (Mac48Address addr, struct rxInfo info)
-{
-	bool exist = false;
-	for (uint32_t i = 0; i < m_infos.size(); i++)
-	{
-		if (m_infos[i].addr == addr){
-			exist = true;
-			m_infos[i].info = info;
-			break;
-		}
-	}
-	if (exist == false){
-			StaInfo stainfo;
-			stainfo.addr = addr;
-			/*
-			m_infos[i].rxInfo.Rssi = info.Rssi;
-			m_infos[i].rxInfo.Snr = info.Snr;
-			m_infos[i].rxInfo.LossPacket = info.LossPacket;
-			m_infos[i].rxInfo.TotalPacket = info.TotalPacket;
-*/
-		m_infos.push_back(stainfo);
-	}
-	for (uint32_t i = 0; i < m_infos.size(); i++){
-		NS_LOG_ERROR("Addr " << m_infos[i].addr); 
-	}
-}
-
 bool
 SbraWifiManager::IsLowLatency (void) const
 {
   return true;
 }
-
-double
-SbraWifiManager::GetAvgMinSnrDb(void)
-{
-	return m_sum_min_snr / (double)m_num;
-}
-double
-SbraWifiManager::GetAvgTxMode(void)
-{
-	return m_sum_tx_mode / (double)m_num;
-}
-double
-SbraWifiManager::GetAvgTxMcs(void)
-{
-	return m_sum_tx_mcs / (double)m_num;
-}
-
-
-
-
 
 } // namespace ns3

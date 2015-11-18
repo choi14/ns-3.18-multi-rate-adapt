@@ -471,9 +471,6 @@ private:
 
   virtual bool DoGetCtsTxGuardInterval (Mac48Address address, WifiMode ctsMode);
 
-	// jychoi
-	virtual WifiMode DoGroupRateAdaptation (void);
-
   virtual uint8_t DoGetCtsTxNss(Mac48Address address, WifiMode ctsMode);
   virtual uint8_t DoGetCtsTxNess(Mac48Address address, WifiMode ctsMode);
   virtual bool  DoGetCtsTxStbc(Mac48Address address, WifiMode ctsMode);

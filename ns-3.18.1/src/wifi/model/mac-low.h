@@ -685,10 +685,12 @@ private:
 	rxRssiVector m_sortedRssiVector;
 	
 	//jychoi
-	void CalculateEwma (double alpha);
-	void CalculateEDR (double eta, double delta, double rho);
+	void CalculateEwma (void);
+	void CalculateEDR (void);
 	void SetRxSnrVector (double rxSnr);
+	void SetRxRssiVector (double rxRssi);
 	uint32_t m_rxSnrVectorSize;
+	uint32_t m_rxRssiVectorSize;
 	double m_rxSnr;
 	double m_rxRssi;
 	// type 1 EWMA

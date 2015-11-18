@@ -272,11 +272,11 @@ main (int argc, char *argv[])
 	Ptr<SbraWifiManager> sbra = DynamicCast<SbraWifiManager>(txRegMac->GetWifiRemoteStationManager());
 
 	NS_LOG_UNCOND("AirTime: " << airtime);
-	NS_LOG_UNCOND("Avg Min SNR (dB): " <<sbra->GetAvgMinSnrDb());
+	//NS_LOG_UNCOND("Avg Min SNR (dB): " <<sbra->GetAvgMinSnrDb());
   
 	
 	fout << "AirTime: " << airtime << std::endl;
-	fout << "AvgMinSnr: " << sbra->GetAvgMinSnrDb () << std::endl;
+	//fout << "AvgMinSnr: " << sbra->GetAvgMinSnrDb () << std::endl;
 	fout.close();
 
 	Simulator::Destroy ();

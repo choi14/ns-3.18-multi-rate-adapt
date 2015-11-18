@@ -134,9 +134,8 @@ main (int argc, char *argv[])
 	wifiChannel.AddPropagationLoss("ns3::JakesPropagationLossModel");
 	Config::SetDefault ("ns3::JakesProcess::DopplerFrequencyHz", DoubleValue (dopplerFrq));
 	// SbraWifiManger
-	Config::SetDefault ("ns3::SbraWifiManager::Type", UintegerValue (rateAdaptType));
-	Config::SetDefault ("ns3::SbraWifiManager::PerThreshold", DoubleValue (perThreshold));
-	// AdhocWifiMac
+	Config::SetDefault ("ns3::AdhocWifiMac::RateAdaptType", UintegerValue (rateAdaptType));
+	Config::SetDefault ("ns3::AdhocWifiMac::PerThreshold", DoubleValue (perThreshold));
 	Config::SetDefault ("ns3::AdhocWifiMac::FeedbackType", UintegerValue (feedbackType));
 	Config::SetDefault ("ns3::AdhocWifiMac::FeedbackPeriod", UintegerValue (feedbackPeriod));
 	Config::SetDefault ("ns3::AdhocWifiMac::Alpha", DoubleValue (alpha));
@@ -278,12 +277,8 @@ main (int argc, char *argv[])
 
 	NS_LOG_UNCOND("AirTime: " << airtime);
 	NS_LOG_UNCOND("AvgPer: " << 1 - sumTotalRx/(getTotalTx*rxNodeNum));
-	NS_LOG_UNCOND("AvgMinSnr(dB): " <<sbraWifi->GetAvgMinSnrDb ());
-	NS_LOG_UNCOND("AvgTxMode(Mb/s): " <<sbraWifi->GetAvgTxMode ());
-	NS_LOG_UNCOND("AvgTxMcs: " <<sbraWifi->GetAvgTxMcs ());
 	
 	fout << "AirTime: " << airtime << std::endl;
-	fout << "AvgMinSnr: " << sbraWifi->GetAvgMinSnrDb () << std::endl;
 	fout.close();
 
 	Simulator::Destroy ();

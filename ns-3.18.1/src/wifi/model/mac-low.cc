@@ -309,19 +309,20 @@ MacLow::MacLow ()
 	m_rxInfo.LossPacket=0;
 	m_rxInfo.TotalPacket=0;
 	m_rxSnrVectorSize = 1000;
-	m_ewmaSnr = 0; //dB
-	m_avgSnr = 0; //dB
-	m_devSnr = 0; //dB
-	m_estSnr = 0; //dB
+	m_rxRssiVectorSize = 1000;
+	m_ewmaSnr = 0.0; //dB
+	m_avgSnr = 0.0; //dB
+	m_devSnr = 0.0; //dB
+	m_estSnr = 0.0; //dB
 	
-	m_ewmaRssi = 0; //dB
-	m_avgRssi = 0; //dB
-	m_devRssi = 0; //dB
-	m_estRssi = 0; //dB
-	
-	m_eta = 0.0;
-	m_delta = 0.0;
-	m_rho = 0.0;
+	m_ewmaRssi = 0.0; //dB
+	m_avgRssi = 0.0; //dB
+	m_devRssi = 0.0; //dB
+	m_estRssi = 0.0; //dB
+
+	m_eta = 1.0; //dB
+	m_delta = 0.1; //dB
+	m_rho = 0.1; //dB
 }
 
 
@@ -581,36 +582,38 @@ MacLow::GetBssid (void) const
   return m_bssid;
 }
 void 
-MacLow::CalculateEwma (double alpha)
+MacLow::CalculateEwma (void)
 {
-	m_ewmaRssi = (1-alpha)*m_ewmaRssi + alpha*10*std::log10(m_ewmaRssi);
-	m_ewmaSnr = (1-alpha)*m_ewmaSnr + alpha*10*std::log10(m_rxSnr); 
+	m_ewmaRssi = (1-m_alpha)*m_ewmaRssi + m_alpha*10*std::log10(m_ewmaRssi);
+	m_ewmaSnr = (1-m_alpha)*m_ewmaSnr + m_alpha*10*std::log10(m_rxSnr); 
 }
 void 
-MacLow::CalculateEDR (double eta, double delta, double rho)
+MacLow::CalculateEDR (void)
 {
-	NS_LOG_INFO ("rxRssi: " << m_rxRssi <<" dbRssi: " << 10*std::log10(m_rxRssi));
-	NS_LOG_INFO ("rxSnr: " << m_rxSnr <<" dbSnr: " << 10*std::log10(m_rxSnr));
-	
-	m_avgRssi = (1-delta)*m_avgRssi + delta*10*std::log10(m_rxRssi);
-	m_avgSnr = (1-delta)*m_avgSnr + delta*10*std::log10(m_rxSnr);
+	NS_LOG_INFO("eta: " << m_eta << " delta: " << m_delta << " rho: " << m_rho);
+	NS_LOG_INFO("In CalculateEDR m_rxRssi: " << m_rxRssi << " m_rxSnr: " << m_rxSnr);
+	NS_LOG_INFO("m_avgRssi: " << m_avgRssi << " m_avgSnr: " << m_avgSnr);
+	m_avgRssi = (1-m_delta)*m_avgRssi + m_delta*10*std::log10(m_rxRssi);
+	m_avgSnr = (1-m_delta)*m_avgSnr + m_delta*10*std::log10(m_rxSnr);
+	NS_LOG_INFO("m_avgRssi: " << m_avgRssi << " m_avgSnr: " << m_avgSnr);
 	
 	double snrDiff = m_avgSnr - 10*std::log10(m_rxSnr);
 	double rssiDiff = m_avgRssi - 10*std::log10(m_rxRssi);
+	NS_LOG_INFO("snrDiff: " << snrDiff << " rssiDiff: " << rssiDiff);
 	
 	if(rssiDiff > 0)
-		m_devRssi = (1-rho)*m_devRssi + rho*snrDiff;
+		m_devRssi = (1-m_rho)*m_devRssi + m_rho*snrDiff;
 	else
-		m_devRssi = (1-rho)*m_devRssi - rho*snrDiff;
+		m_devRssi = (1-m_rho)*m_devRssi - m_rho*snrDiff;
 	
 	if(snrDiff > 0)
-		m_devSnr = (1-rho)*m_devSnr + rho*snrDiff;
+		m_devSnr = (1-m_rho)*m_devSnr + m_rho*snrDiff;
 	else
-		m_devSnr = (1-rho)*m_devSnr - rho*snrDiff;
+		m_devSnr = (1-m_rho)*m_devSnr - m_rho*snrDiff;
 
 	
-	m_estRssi = m_avgSnr - eta*m_devRssi;
-	m_estSnr = m_avgSnr - eta*m_devSnr;
+	m_estRssi = m_avgSnr - m_eta*m_devRssi;
+	m_estSnr = m_avgSnr - m_eta*m_devSnr;
 	
 	NS_LOG_INFO ("m_avgRssi: " << m_avgRssi <<" m_devRssi: " << m_devRssi <<" m_estRssi: " << m_estRssi);
 	NS_LOG_INFO ("m_avgSnr: " << m_avgSnr <<" m_devSnr: " << m_devSnr <<" m_estSnr: " << m_estSnr);
@@ -1107,9 +1110,10 @@ MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rxRssi,  WifiMode tx
 					m_rxSnr = rxSnr;
 					m_rxRssi = rxRssi;
 					NS_LOG_INFO ("m_rxRssi: " << m_rxRssi << " m_rxSnr: " << m_rxSnr);
-					CalculateEwma (m_alpha);
-					CalculateEDR (m_eta, m_delta, m_rho);
+					CalculateEwma ();
+					CalculateEDR ();
 					SetRxSnrVector(rxSnr);
+					SetRxRssiVector(rxRssi);
 					/*
       				SnrTag tag;
 					tag.SetSnr(rxSnr);
@@ -1153,6 +1157,20 @@ MacLow::SetRxSnrVector (double rxSnr)
 	{
 		m_rxSnrVector.erase (m_rxSnrVector.begin ());
 		m_rxSnrVector.push_back(rxSnr);
+	}
+}
+
+void 
+MacLow::SetRxRssiVector (double rxRssi)
+{
+	if(m_rxRssiVector.size () < m_rxRssiVectorSize)
+	{
+		m_rxRssiVector.push_back(rxRssi);
+	}
+	else if (m_rxRssiVector.size () == m_rxRssiVectorSize)
+	{
+		m_rxRssiVector.erase (m_rxRssiVector.begin ());
+		m_rxRssiVector.push_back(rxRssi);
 	}
 }
 
