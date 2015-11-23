@@ -561,6 +561,7 @@ YansWifiPhy::SendPacket (Ptr<const Packet> packet, WifiMode txMode, WifiPreamble
   NS_ASSERT (!m_state->IsStateTx () && !m_state->IsStateSwitching ());
 
   Time txDuration = CalculateTxDuration (packet->GetSize (), txVector, preamble);
+	NS_LOG_INFO ("PacketSize: " << packet->GetSize () << " txVector: " << txVector << " Preamble: " << preamble);
   if (m_state->IsStateRx ())
     {
       m_endRxEvent.Cancel ();

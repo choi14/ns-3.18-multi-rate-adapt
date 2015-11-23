@@ -7,7 +7,7 @@
 #include "ns3/sbra-wifi-manager.h"
 #include "ns3/fb-headers.h"
 #include "ns3/adhoc-wifi-mac.h"
-
+#include "ns3/mobility-model.h"
 #include <vector>
 
 using namespace ns3;
@@ -68,12 +68,12 @@ main (int argc, char *argv[])
 	uint32_t seed = 1; // 1:1:100 
 	uint32_t rateAdaptType = 0; // 0 or 1 0-> per over 0.001 1-> maximun throughput 
 	uint32_t feedbackType = 3; // 0, 1, 2, 3
-	uint64_t feedbackPeriod = 200; // MilliSeconds
+	uint32_t nc_k = 10;	
+	uint64_t feedbackPeriod = 100; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
-	double bound = 20.0; 
+	double bound = 10.0; 
 	double endTime = 20;
 	double perThreshold = 0.001;
-	
 	// feedbackType 0
 	double percentile = 0.9; // [0, 1]
 	// feedbackType 1
@@ -133,7 +133,7 @@ main (int argc, char *argv[])
 	double dopplerFrq = dopplerVelocity*50/3; 
 	wifiChannel.AddPropagationLoss("ns3::JakesPropagationLossModel");
 	Config::SetDefault ("ns3::JakesProcess::DopplerFrequencyHz", DoubleValue (dopplerFrq));
-	// SbraWifiManger
+	// Adhoc-wifi-mac
 	Config::SetDefault ("ns3::AdhocWifiMac::RateAdaptType", UintegerValue (rateAdaptType));
 	Config::SetDefault ("ns3::AdhocWifiMac::PerThreshold", DoubleValue (perThreshold));
 	Config::SetDefault ("ns3::AdhocWifiMac::FeedbackType", UintegerValue (feedbackType));
@@ -162,15 +162,27 @@ main (int argc, char *argv[])
 	txMobility.SetPositionAllocator (positionAlloc);
   txMobility.Install (txNodes.Get (0));
 
+	/*
   std::stringstream DiscRho;
 	DiscRho << "ns3::UniformRandomVariable[Min=" << bound << "|Max=" << bound << "]";	
 	rxMobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
 			"X", StringValue ("0.0"),
 			"Y", StringValue ("0.0"),
 			"Rho", StringValue (DiscRho.str() ));
+	*/
+	std::stringstream Rectangle;
+	Rectangle << "ns3::UniformRandomVariable[Min=" << -0.5*bound << "|Max=" << 0.5*bound << "]";
+	rxMobility.SetPositionAllocator ("ns3::RandomRectanglePositionAllocator",
+			"X", StringValue (Rectangle.str ()),
+			"Y", StringValue (Rectangle.str ()));
 	rxMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   rxMobility.Install (rxNodes);
-	
+
+	for (uint32_t i=0; i < rxNodes.GetN(); i++)
+	{
+		std::cout <<	 rxNodes.Get(i)->GetObject<MobilityModel> ()->GetPosition() << std::endl;
+	}
+
 	InternetStackHelper stack;
 	stack.Install (txNodes);
 	stack.Install (rxNodes);
@@ -228,22 +240,22 @@ main (int argc, char *argv[])
 		case 0:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " percentile: " << percentile << " bound: " << bound);
-			out_filename << "storage_results/result_151111/per_" << percentile << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_151119/per_" << percentile << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 1:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " alpha: " << alpha << " bound: " << bound);
-			out_filename << "storage_results/result_151111/alp_" <<   alpha   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_151119/alp_" <<   alpha   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 2:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " beta: " << beta << " bound: " << bound);
-			out_filename << "storage_results/result_151111/bet_" <<   beta   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_151119/bet_" <<   beta   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 3: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound);
-			out_filename << "storage_results/result_edr_151111/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_edr_test/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 	}
 
 	fout.open(out_filename.str().c_str(), std::ostream::out);
@@ -254,7 +266,7 @@ main (int argc, char *argv[])
 	//	" feedbackType: " << feedbackType << " percentile: " << percentile << " alpha: " << alpha << " beta: " << beta << std::endl;
 	
 	Ptr<OnOffApplication> onof = txApp.Get(0)->GetObject<OnOffApplication> ();
-	getTotalTx = onof->GetTotalTx ()/1000;
+	getTotalTx = nc_k*(onof->GetTotalTx ()/1000/nc_k);
 	NS_LOG_UNCOND("Source node sent: " << getTotalTx);
 	fout << "Source node sent: " << getTotalTx << std::endl;
 

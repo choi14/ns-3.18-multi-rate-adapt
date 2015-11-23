@@ -590,16 +590,11 @@ MacLow::CalculateEwma (void)
 void 
 MacLow::CalculateEDR (void)
 {
-	NS_LOG_INFO("eta: " << m_eta << " delta: " << m_delta << " rho: " << m_rho);
-	NS_LOG_INFO("In CalculateEDR m_rxRssi: " << m_rxRssi << " m_rxSnr: " << m_rxSnr);
-	NS_LOG_INFO("m_avgRssi: " << m_avgRssi << " m_avgSnr: " << m_avgSnr);
 	m_avgRssi = (1-m_delta)*m_avgRssi + m_delta*10*std::log10(m_rxRssi);
 	m_avgSnr = (1-m_delta)*m_avgSnr + m_delta*10*std::log10(m_rxSnr);
-	NS_LOG_INFO("m_avgRssi: " << m_avgRssi << " m_avgSnr: " << m_avgSnr);
 	
 	double snrDiff = m_avgSnr - 10*std::log10(m_rxSnr);
 	double rssiDiff = m_avgRssi - 10*std::log10(m_rxRssi);
-	NS_LOG_INFO("snrDiff: " << snrDiff << " rssiDiff: " << rssiDiff);
 	
 	if(rssiDiff > 0)
 		m_devRssi = (1-m_rho)*m_devRssi + m_rho*snrDiff;
@@ -614,9 +609,9 @@ MacLow::CalculateEDR (void)
 	
 	m_estRssi = m_avgSnr - m_eta*m_devRssi;
 	m_estSnr = m_avgSnr - m_eta*m_devSnr;
-	
-	NS_LOG_INFO ("m_avgRssi: " << m_avgRssi <<" m_devRssi: " << m_devRssi <<" m_estRssi: " << m_estRssi);
-	NS_LOG_INFO ("m_avgSnr: " << m_avgSnr <<" m_devSnr: " << m_devSnr <<" m_estSnr: " << m_estSnr);
+
+	NS_LOG_INFO("m_estRssi: " << m_estRssi << " m_estSnr: " << m_estSnr);
+
 }
 double
 MacLow::GetRxSnr (void)
@@ -831,8 +826,9 @@ MacLow::NeedCtsToSelf (WifiTxVector dataTxVector)
   return m_stationManager->NeedCtsToSelf (dataTxVector);
 }
 void
-MacLow::ReceiveError (Ptr<const Packet> packet, double rxSnr, double rssi)
+MacLow::ReceiveError (Ptr<const Packet> packet, double rxSnr, double rxRssi)
 {
+	NS_LOG_INFO("RxSnr: " << rxSnr << " rxRssi: " << rxRssi);
 	Ptr<Packet> copy_packet = Create<Packet> ();
 	copy_packet = packet->Copy ();
 	WifiMacHeader hdr;

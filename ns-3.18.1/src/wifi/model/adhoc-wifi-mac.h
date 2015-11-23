@@ -27,6 +27,7 @@
 #include "online-table-manager.h"
 #include "MNC_codec.h"
 #include "wifi-mac-queue.h"
+#include "wifi-tx-vector.h"
 
 #include "amsdu-subframe-header.h"
 
@@ -97,9 +98,11 @@ private:
 	// jychoi
 	void SendFeedback (void);	
 	uint8_t GroupRateAdaptation (void);
-	
+
+	Time duration;
 	uint64_t m_feedbackPeriod;
 	bool m_initialize;
+	bool m_firstnt;
 	bool m_setMacLowValue;
 	Mac48Address m_srcAddress;
 	uint32_t m_fbtype;
@@ -113,6 +116,7 @@ private:
 	double m_per;
 	double m_minSnr;
 	double m_minRssi;
+	double m_minNT;
 	uint32_t m_ratype;
 	uint32_t m_GroupTxMcs;
 	uint32_t m_max;
@@ -128,7 +132,6 @@ private:
 	typedef std::list<MNC_Decoder>::iterator MNC_Decoder_QueueI;
   	
 	//MNC_Decoder m_MNC_Decoder;
-
 	uint8_t m_k;
 	uint8_t m_mcast_mcs;
 	uint8_t m_burstsize;
