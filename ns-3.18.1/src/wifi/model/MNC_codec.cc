@@ -171,7 +171,7 @@ namespace ns3{
 			else if(eid == m_last_eid){
 					seq = m_last_seq + l + 1;
 			}
-			CoefficientHeader coeffi_hdr(eid, p, k, seq, coeffi);
+			CoefficientHeader coeffi_hdr(eid, p, k, n, seq, coeffi);
 			sendpacket->AddHeader(coeffi_hdr);
 			m_MNCbuffer_N->Enqueue(sendpacket, tmphdr);
 		}
@@ -221,7 +221,7 @@ namespace ns3{
 				else if(eid == m_last_eid){
 						seq = m_last_seq + i + 1;
 				}
-				CoefficientHeader coeffi_hdr(eid, p, k, seq, coeffi);
+				CoefficientHeader coeffi_hdr(eid, p, k, n, seq, coeffi);
 				temp->AddHeader(coeffi_hdr);
 				m_MNCbuffer_N->Enqueue(temp, tmphdr);
 				//std::cout << "temppacket = " << temppacket->GetSize() << std::endl;
@@ -245,7 +245,7 @@ namespace ns3{
 				else if(eid == m_last_eid){
 						seq = m_last_seq + i + 1;
 				}
-				CoefficientHeader coeffi_hdr(eid, p, k, seq, coeffi);
+				CoefficientHeader coeffi_hdr(eid, p, k, n, seq, coeffi);
 				temp->AddHeader(coeffi_hdr);
 				m_MNCbuffer_N->Enqueue(temp, tmphdr);
 			}

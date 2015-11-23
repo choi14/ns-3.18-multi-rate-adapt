@@ -587,6 +587,11 @@ MacLow::GetRxSnr (void)
 {
 		return m_rxSnr;
 }
+uint8_t
+MacLow::GetRxMcs (void)
+{
+		return m_rxMcs;
+}
 
 
 struct rxInfo
@@ -1017,6 +1022,11 @@ MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rssi,  WifiMode txMo
 					NS_LOG_DEBUG ("rx group from=" << hdr.GetAddr2 ());
 					m_rxInfo.TotalPacket++; //jychoi
 					m_rxSnr = rxSnr;
+					for (uint32_t i = 0; i < m_stationManager->GetNBasicModes(); i++){
+						if (m_stationManager->GetBasicMode(i) == txMode)
+								m_rxMcs = i;
+					}
+
 					CalculateEwma (m_alpha);
 					CalculateEDR (m_eta, m_delta, m_rho);
 					SetRxSnrVector(rxSnr);

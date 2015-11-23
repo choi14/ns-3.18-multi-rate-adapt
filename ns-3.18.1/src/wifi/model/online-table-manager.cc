@@ -49,6 +49,7 @@ OnlineTableManager::OnlineTableManager():
 		m_tot = 0;
 		m_first_seq = 0;
 		m_transition = 2;
+		m_nc_n = 20;
 		//m_last_seq = 0;
 		m_training_max = 100;
 		m_min_num_samples = 5;
@@ -56,7 +57,12 @@ OnlineTableManager::OnlineTableManager():
 		sampling_period = Time(MilliSeconds(20));
 		
 		for (uint32_t i = 0; i < 8; i++){
-				for (uint32_t j=0; j < 30; j++){
+				m_rssi_high[i] = 0;
+				m_rssi_low[i] = 0;
+				m_no_low[i] = true;
+				m_no_middle[i] = true;
+				m_no_high[i] = true;
+				for (uint32_t j=0; j < 50; j++){
 						m_table[i][j].p = 0;
 						m_table[i][j].mark = false;
 						m_correct_table[i][j].p = 0;
@@ -92,7 +98,7 @@ OnlineTableManager::InitialTable (uint16_t seq, uint16_t id, uint8_t mcs, uint32
 					m_timeoutEvent.Cancel();
 				
 			// if (m_tot > theshold){} // to be
-			m_tot = m_training_max - m_first_seq + 1;
+			m_tot = m_training_max - m_first_seq;
 	
 			if (m_tot > m_min_num_samples)
 				RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_tot);
@@ -119,7 +125,7 @@ OnlineTableManager::InitialTable (uint16_t seq, uint16_t id, uint8_t mcs, uint32
 		}
 		else{
 			if (m_type == 1 && seq - m_first_seq >= m_sampling_num ){
-				NS_LOG_INFO("Seq: " << seq << " FirstSeq: " << m_first_seq << " Avg rssi: " << m_rssi_cur / m_rcv  );
+				//NS_LOG_INFO("Seq: " << seq << " FirstSeq: " << m_first_seq << " Avg rssi: " << m_rssi_cur / m_rcv  );
 				m_tot = m_sampling_num;
 				
 
@@ -162,18 +168,37 @@ OnlineTableManager::InitialTable (uint16_t seq, uint16_t id, uint8_t mcs, uint32
 			m_timeoutEvent = Simulator::Schedule (sampling_period, &OnlineTableManager::SamplingTimeout, this);
 	}
 }
-/*
-void
-OnlineTableManager::UpdateTable (uint32_t seq, uint32_t id, uint8_t mcs, uint32_t rssi){
 
+void
+OnlineTableManager::UpdateTable (uint16_t seq, uint16_t id, uint8_t mcs, uint32_t rssi){
+	NS_ASSERT(seq <= m_nc_n);
+
+	if (id != m_id || mcs != m_mcs_cur){
+			if (m_tot > m_min_num_samples){
+					RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_nc_n);
+					FillingBlank(m_mcs_cur);
+					Monotonicity();
+			}
+
+			m_mcs_cur = mcs;
+			m_rssi_cur = rssi;
+			m_first_seq = 0;
+			m_rcv = 1;
+			m_id = id;
+	}
+	else{
+		m_rssi_cur += rssi;
+		m_rcv++;
+	}
 }
-*/
+
+
 void
 OnlineTableManager::SamplingTimeout (void){
 	double pdr = (double)m_rcv / (double)m_tot;
 	uint32_t rssi_avg = m_rssi_cur / m_rcv;
 	
-	NS_LOG_INFO("Sampling Timeout Pdr: " << pdr << " Rssi: " << rssi_avg  << " rcv: " << m_rcv << " tot: " << m_tot << " mcs: " << (uint32_t)m_mcs_cur); 
+	NS_LOG_LOGIC("Sampling Timeout Pdr: " << pdr << " Rssi: " << rssi_avg  << " rcv: " << m_rcv << " tot: " << m_tot << " mcs: " << (uint32_t)m_mcs_cur); 
 	
 	if (m_tot > m_min_num_samples)
 		RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_tot);
@@ -187,7 +212,9 @@ OnlineTableManager::RecordSample (uint8_t mcs, uint32_t rssi_sum, uint16_t rcv, 
 	uint32_t rssi_idx = rssi - rssi_min;
 	uint32_t mcs_idx = (uint32_t)mcs;
 
-	if (rssi_idx >= 30){
+	NS_LOG_LOGIC("New Sample MCS: " << mcs_idx << " IDX: " << rssi_idx <<  " RSSI_SUM: " << rssi_sum << " RCV: " << rcv << " TOT: " << tot << "PDR: " << pdr);
+	
+	if (rssi_idx >= 50){
 			NS_LOG_INFO("High RSSI MCS: " << mcs_idx << " IDX: " << rssi_idx <<  " RSSI_SUM: " << rssi_sum << " RCV: " << rcv << " TOT: " << tot);
 			return;
 	}
@@ -217,11 +244,11 @@ OnlineTableManager::RecordSample (uint8_t mcs, uint32_t rssi_sum, uint16_t rcv, 
 }
 
 void
-OnlineTableManager::PrintTable(Pdr table[][30], std::ostream &os){
+OnlineTableManager::PrintTable(Pdr table[][50], std::ostream &os){
 	os.precision (2);
 	for (uint32_t i = 0; i < 8; i++){
 		os << "MCS " << i << " Rcv: (";	
-		for (uint32_t j=0; j<30; j++){
+		for (uint32_t j=0; j<50; j++){
 				os << (table[i][j]).p << " ";
 		}
 
@@ -265,7 +292,7 @@ OnlineTableManager::GenerateCorrectTable(void)
 			double nSymbols = ((databytes+64)*8+22)/coderate/ofdmbits;
 			uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
 
-			for (uint32_t j = 0; j < 30; j++){
+			for (uint32_t j = 0; j < 50; j++){
 					double snr = (double)j + (double)rssi_min;
 					snr = std::pow(10.0, snr/10.0);
 					double pdr = m_phy->CalculatePdr (mode, snr, nbits);
@@ -296,146 +323,210 @@ OnlineTableManager::PrintOnlineTable(std::ostream &os){
 	PrintTable(m_table, os);
 }
 
+double
+OnlineTableManager::GetPdr (uint8_t mcs, uint32_t rssi){
+	return m_table[mcs][rssi].p;
+}
+
 void
-OnlineTableManager::FillingBlank(void){
-		uint32_t snr_edge = 0;
+OnlineTableManager::FillingBlank(uint8_t mcs){
+		//NS_LOG_INFO( " Before Filling ");
+		//PrintOnlineTable(std::cout);
 
-		PrintOnlineTable(std::cout);
-		
-		std::cout << " After Filling " << std::endl;
-		for (uint32_t i = 0; i < 8; i++){
-				uint32_t mcs_idx = 7-i;
+		double rssi_low_value = 1;
+		double rssi_high_value = 0;
 
-				uint32_t snr_low_id = 0;
-				double snr_low_value = 1;
-				uint32_t snr_high_id = 0;
-				double snr_high_value =0;
+		for (uint32_t j=0; j < 50; j++){
+				double pdr = m_table[mcs][j].p;
+				bool mark = m_table[mcs][j].mark;
 
-				bool no_low = true;
-				bool no_high = true;
-
-				for (uint32_t j=0; j < 30; j++){
-						double pdr = m_table[mcs_idx][j].p;
-						bool mark = m_table[mcs_idx][j].mark;
-
-						if (mark == true && pdr == threshold_low){
-								no_low = false;
-						}
-
-						if (mark == true && pdr <= snr_low_value){
-								snr_low_id = j;
-								snr_low_value = pdr;
-						}
-						
-						if (mark == true && pdr > snr_high_value){
-								if (snr_high_value != 0){
-										for (uint32_t k = snr_high_id + 1; k < j; k++){
-												m_table[mcs_idx][k].p = snr_high_value +(double)(k-snr_high_id)*(pdr - snr_high_value)/(double)(j-snr_high_id);
-										}
-								}
-								snr_high_value = pdr;
-								snr_high_id = j;
-						}
-						if (mark == true && pdr == threshold_high){
-							//NS_LOG_UNCOND("ID: " << j);
-							for (uint32_t k = j+1; k < 30; k++){
-								m_table[mcs_idx][k].p = threshold_high;
-							}
-							snr_high_value = pdr;
-							snr_high_id = j;
-							
-							no_high = false;
-							break;
-						}
+				if (mark == true && pdr < threshold_low){
+						m_no_low[mcs] = false;
 				}
-				if (no_low == true && no_high == true){
-						NS_LOG_UNCOND("MCS: " << mcs_idx << " High ID: " << snr_high_id << " Low ID: " << snr_low_id); 
-						if (snr_low_id == snr_high_id){
-							if (snr_high_id == 0)
-									continue;
-
-							NS_LOG_INFO("Single sample");
-								
-							for (int k = (int)snr_high_id; k >= 0; k--){
-								m_table[mcs_idx][k].p = snr_high_value - (double)(snr_high_id-k)*(threshold_high /(double)m_transition);
-								if (m_table[mcs_idx][k].p < threshold_low){
-										m_table[mcs_idx][k].p = 0;
-										break;
-								}
-							}
-							
-							for (int k = (int)snr_high_id; k < 30; k++){
-								m_table[mcs_idx][k].p = snr_high_value + (double)(k - snr_high_id)*(threshold_high /(double)m_transition);
-								if (m_table[mcs_idx][k].p >= threshold_high){
-										m_table[mcs_idx][k].p = threshold_high;
-								}
-							}
-						}
-
-						else{
-							double slope = (snr_high_value - snr_low_value) / (snr_high_id - snr_low_id);
-
-							for (uint32_t k = 0; k < snr_low_id; k++){
-									if ( k + m_transition < snr_low_id )
-											m_table[mcs_idx][k].p = 0;
-									else{
-											m_table[mcs_idx][k].p = snr_low_value - (double)(snr_low_id-k)*slope;
-											if (m_table[mcs_idx][k].p < threshold_low){
-													m_table[mcs_idx][k].p = 0;
-											}
-									}
-							}
-							
-							for (uint32_t k = snr_high_id+1; k < 30; k++){
-								m_table[mcs_idx][k].p = snr_high_value + (double)(k - snr_high_id)*slope;
-								if (m_table[mcs_idx][k].p >= threshold_high){
-										m_table[mcs_idx][k].p = threshold_high;
-								}
-							}
-						}
+				if (mark == true && pdr <= rssi_low_value){
+						m_rssi_low[mcs] = j;
+						rssi_low_value = pdr;
 				}
-				else if (no_low == true){
-						//NS_LOG_UNCOND("MCS: " << mcs_idx << " High ID: " << snr_high_id << " Low ID: " << snr_low_id); 
-						double slope = 0;
-						if (snr_high_id == snr_low_id){
-							if (snr_edge == 0){
-									snr_edge = snr_high_id;
-							}
-							else{
-									if (snr_high_id >= snr_edge){
-										for (uint32_t k=snr_edge-1; k < snr_high_id;	k++){
-											m_table[mcs_idx][k].p = threshold_high;
-										}
-										snr_high_id = snr_edge-1;
-										snr_low_id = snr_edge-1;
-										snr_edge = snr_high_id;
-									}
-							}
-
-							slope = threshold_high / (double)m_transition;
-						}
-						else{
-							slope = (snr_high_value - snr_low_value) / (double)(snr_high_id - snr_low_id);
-						}
-						
-						for (uint32_t k = snr_low_id - m_transition; k < snr_low_id; k++){
-								m_table[mcs_idx][k].p = snr_low_value - (double)(snr_low_id-k)*slope;
-								if (m_table[mcs_idx][k].p < threshold_low){
-										m_table[mcs_idx][k].p = 0;
+				if (mark == true && pdr > threshold_low && pdr < threshold_high){
+						m_no_middle[mcs] = false;
+				}
+				if (mark == true && pdr > rssi_high_value){
+						if (rssi_high_value != 0){
+								for (uint32_t k = m_rssi_high[mcs] + 1; k < j; k++){
+										m_table[mcs][k].p = rssi_high_value +(double)(k-m_rssi_high[mcs])*(pdr - rssi_high_value)/(double)(j-m_rssi_high[mcs]);
 								}
 						}
+						rssi_high_value = pdr;
+						m_rssi_high[mcs] = j;
 				}
-				else if (no_high == true){
+				if (mark == true && pdr == threshold_high){
+						for (uint32_t k = j+1; k < 50; k++){
+								m_table[mcs][k].p = threshold_high;
+						}
+						rssi_high_value = pdr;
+						m_rssi_high[mcs] = j;
 
+						m_no_high[mcs] = false;
+						break;
 				}
+		}
+}
 
+void
+OnlineTableManager::Monotonicity(void){
+	uint8_t ref_mcs = 8;
+
+//	NS_LOG_UNCOND("Before Monotonicity");
+//	PrintOnlineTable(std::cout);
+	
+	for (uint8_t i=0; i < 8; i++){
+		bool no_low = m_no_low[i];
+		bool no_high = m_no_high[i];
+		bool no_middle = m_no_middle[i];
+
+		if (!no_high && !no_low){
+				ref_mcs = i;
+				break;
+		}
+				
+		if ((!no_high && !no_middle) && i < ref_mcs){
+			ref_mcs = i;
+		}
+		NS_LOG_INFO("MCS :  "<< (uint32_t)i <<  " High: " << m_rssi_high[i] << " Low: " << m_rssi_low[i] << " RefMCS: " << (uint32_t)ref_mcs);
+	}
+	if (ref_mcs == 8){
+			ref_mcs = 0;
+	}
+
+	if (m_no_low[ref_mcs]){
+		double rssi_high_value = (m_table[ref_mcs][m_rssi_high[ref_mcs]]).p;
+		double rssi_low_value = (m_table[ref_mcs][m_rssi_low[ref_mcs]]).p;
+		double slope = 0;
+
+		if (m_no_middle[ref_mcs]){
+			slope = threshold_high / (double)m_transition;
+		}
+		else{
+			slope = (rssi_high_value - rssi_low_value) / (double)(m_rssi_high[ref_mcs] - m_rssi_low[ref_mcs]);
+		}
+		for (uint32_t k = m_rssi_low[ref_mcs]; k >= m_rssi_high[ref_mcs]-m_transition; k--){
+				m_table[ref_mcs][k].p = rssi_high_value - (double)(m_rssi_high[ref_mcs]-k)*slope;
+				m_rssi_low[ref_mcs] = k;
+				if (m_table[ref_mcs][k].p < threshold_low){
+						m_table[ref_mcs][k].p = 0;
+						break;
+				}
 		}
 
-		PrintOnlineTable(std::cout);
+		if ((m_table[ref_mcs][m_rssi_low[ref_mcs]]).p > 0){
+				m_rssi_low[ref_mcs] -= 1;
+		}
+	}
+
+	for (uint8_t i = 0; i < 8; i++){
+		bool no_low = m_no_low[i];
+		bool no_high = m_no_high[i];
+		bool no_middle = m_no_middle[i];
+	
+		NS_LOG_INFO("MCS :  "<< (uint32_t)i <<  " High: " << m_rssi_high[i] << " Low: " << m_rssi_low[i] << " ( " << no_high << " " << no_low << " " << no_middle << " )");
+
+		if (i == ref_mcs)
+				continue;
+		if (!no_high && !no_low)
+				continue;
+		else if (!no_high && !no_middle)
+				continue;
+		else if (!no_high && no_middle){
+				if(m_rssi_high[i] > m_rssi_high[ref_mcs] + i - ref_mcs ){
+						m_rssi_high[i] = m_rssi_high[ref_mcs] + i - ref_mcs;
+				}
+				if (m_rssi_low[i] > m_rssi_low[ref_mcs] + i -ref_mcs){
+						m_rssi_low[i] = m_rssi_low[ref_mcs] + i -ref_mcs;
+				}
+
+				double slope = 0;
+
+				if (m_rssi_high[i] == m_rssi_low[i])
+					slope = threshold_high / (double)m_transition;
+				else
+					slope = threshold_high / (double)(m_rssi_high[i] - m_rssi_low[i]);
+				
+				NS_LOG_INFO("MCS: "<< (uint32_t)i <<  " High: " << m_rssi_high[i] << " Low: " << m_rssi_low[i] << " ( " << no_high << " " << no_low << " " << no_middle << " )" << " Slope: " << slope );
+				
+				for (uint32_t k = m_rssi_high[i]; k < 50; k++){
+						m_table[i][k].p = threshold_high;
+				}
+				for (uint32_t k = 0; k <= m_rssi_low[i]; k++){
+						m_table[i][k].p = 0;
+
+				}
+
+				for (uint32_t k = m_rssi_low[i]+1; k < m_rssi_high[i]; k++){
+						m_table[i][k].p = threshold_high - (double)(m_rssi_high[i]-k)*slope;
+						if (m_table[i][k].p < threshold_low){
+								m_table[i][k].p = 0;
+						}
+				}
+		}
+		else if (no_high && no_low){
+				double rssi_high_value = (m_table[i][m_rssi_high[i]]).p;
+				double rssi_low_value = (m_table[i][m_rssi_low[i]]).p;
+
+				if (m_rssi_low[i] == m_rssi_high[i]){
+						if (m_rssi_high[i] == 0)
+								continue;
+
+						NS_LOG_INFO("Single sample");
+
+						for (uint32_t k = 0; k < m_rssi_high[i]; k++){
+								m_table[i][k].p = rssi_high_value - (double)(m_rssi_high[i]-k)*(threshold_high /(double)m_transition);
+								if (m_table[i][k].p < threshold_low){
+										m_table[i][k].p = 0;
+										break;
+								}
+						}
+
+						for (uint32_t k = m_rssi_high[i]; k < 50; k++){
+								m_table[i][k].p = rssi_high_value + (double)(k - m_rssi_high[i])*(threshold_high /(double)m_transition);
+								if (m_table[i][k].p >= threshold_high){
+										m_table[i][k].p = threshold_high;
+								}
+						}
+				}
+
+				else{
+						double slope = (rssi_high_value - rssi_low_value) / (m_rssi_high[i] - m_rssi_low[i]);
+
+						for (uint32_t k = 0; k < m_rssi_low[i]; k++){
+								if ( k + m_transition < m_rssi_low[i] )
+										m_table[i][k].p = 0;
+								else{
+										m_table[i][k].p = rssi_low_value - (double)(m_rssi_low[i]-k)*slope;
+										if (m_table[i][k].p < threshold_low){
+												m_table[i][k].p = 0;
+										}
+								}
+						}
+
+						for (uint32_t k = m_rssi_high[i]+1; k < 50; k++){
+								m_table[i][k].p = rssi_high_value + (double)(k - m_rssi_high[i])*slope;
+								if (m_table[i][k].p >= threshold_high){
+										m_table[i][k].p = threshold_high;
+								}
+						}
+				}
+		}
+	}
+
+//	NS_LOG_UNCOND("After Monotonicity");
+//	PrintOnlineTable(std::cout);
 }
 
 
-
+void
+OnlineTableManager::SetN(uint16_t nc_n){
+		m_nc_n = nc_n;
+}
 
 
 

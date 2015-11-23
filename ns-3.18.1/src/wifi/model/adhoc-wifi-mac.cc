@@ -123,7 +123,8 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_last_eid = 0;
   	m_MNC_K = 10;
   	m_MNC_P = 1;
-	target = false;
+	m_aid = 0;
+	start_nc = false;
 
   	m_tableManager = CreateObject<OnlineTableManager> ();
 	
@@ -133,10 +134,15 @@ AdhocWifiMac::AdhocWifiMac ()
 
 AdhocWifiMac::~AdhocWifiMac ()
 {
-//	m_tableManager->PrintOnlineTable(std::cout);
+/*
+  for (uint8_t i=0; i < 8; i++){
+  	m_tableManager->FillingBlank(i);
+  }
+  m_tableManager->Monotonicity();
+*/ 
+  NS_LOG_UNCOND("AID " << m_aid << " After table");
+	m_tableManager->PrintOnlineTable(std::cout);
   NS_LOG_FUNCTION (this);
-	if (target)
-		m_tableManager->FillingBlank();
 }
 
 void
@@ -440,11 +446,33 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 {
   		Mac48Address from = hdr->GetAddr2 ();
   		Mac48Address to = hdr->GetAddr1 ();
-		
+
 		CoefficientHeader coeffi; 
 		packet->PeekHeader(coeffi);
-
+	
 		uint16_t eid = coeffi.GetEid();
+		uint16_t seq = coeffi.GetSeq();
+		uint8_t rate = m_low->GetRxMcs();
+		double snr = m_low->GetRxSnr();
+		uint32_t snr_db =(uint32_t)(10*std::log10(snr));
+
+		if (start_nc == false){
+			for (uint8_t i=0; i < 8; i++){	
+				m_tableManager->FillingBlank(i);
+			}
+			m_tableManager->Monotonicity();
+
+
+  			NS_LOG_UNCOND("AID " << m_aid << " Init table");
+			m_tableManager->PrintOnlineTable(std::cout);
+
+
+			uint8_t n = coeffi.GetN();
+			m_tableManager->SetN((uint16_t)n);
+			start_nc = true;
+		}
+
+		m_tableManager->UpdateTable(seq, eid, rate, snr_db);	
 
 		if (eid <= m_last_eid)
 				return;
@@ -527,8 +555,8 @@ AdhocWifiMac::SetBasicModes(void)
 }
 
 void
-AdhocWifiMac::SetTarget(bool t){
-		target = t;
+AdhocWifiMac::SetAid(uint32_t aid){
+		m_aid = aid;
 }
 
 

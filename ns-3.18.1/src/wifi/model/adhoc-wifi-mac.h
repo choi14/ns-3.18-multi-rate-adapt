@@ -69,7 +69,7 @@ public:
   void SetBasicModes(void);
 	struct rxInfo m_rxInfoSet;
   struct rxInfo m_rxInfoGet;
-  void SetTarget(bool t);
+  void SetAid(uint32_t aid);
 
 
 private:
@@ -107,7 +107,8 @@ private:
 	uint8_t m_MNC_K;
 	uint8_t m_MNC_P;
    
-	bool target;
+	uint32_t m_aid;
+	bool start_nc;
 };
 
 } // namespace ns3

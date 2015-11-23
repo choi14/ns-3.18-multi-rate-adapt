@@ -7,6 +7,7 @@
 #include "ns3/sbra-wifi-manager.h"
 #include "ns3/fb-headers.h"
 #include "ns3/adhoc-wifi-mac.h"
+#include "ns3/mobility-model.h"
 
 using namespace ns3;
 
@@ -22,7 +23,7 @@ double idletime = 0;
 double ccatime = 0;
 double switchtime = 0;
 
-double start_time = 20;
+double start_time = 30;
 
 static void StartTl(Ptr<AdhocWifiMac> mac)
 {
@@ -78,7 +79,7 @@ main (int argc, char *argv[])
 	uint64_t feedbackPeriod = 200; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
 	double bound = 10.0; 
-	double endTime = 20;
+	double endTime = 30;
 	double perThreshold = 0.001;
 	
 	// feedbackType 0
@@ -166,21 +167,23 @@ main (int argc, char *argv[])
 	txMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 	Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
 	positionAlloc->Add (Vector (0.0, 0.0, 0.0));
-	positionAlloc->Add (Vector (0.0, 15.0, 0.0));
 	txMobility.SetPositionAllocator (positionAlloc);
     txMobility.Install (txNodes.Get (0));
-	txMobility.Install (rxNodes.Get (0));
 
     std::stringstream DiscRho;
-	DiscRho << "ns3::UniformRandomVariable[Min=" << -1*bound/2 << "|Max=" << bound/2 << "]";	//ycshin modified
+	DiscRho << "ns3::UniformRandomVariable[Min=" << -1*bound << "|Max=" << bound << "]";	//ycshin modified
 	rxMobility.SetPositionAllocator ("ns3::RandomRectanglePositionAllocator",
 			"X", StringValue (DiscRho.str()),
 			"Y", StringValue (DiscRho.str()));
 	rxMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
 
-	for (uint32_t n = 1; n < rxNodes.GetN(); n++)
+	for (uint32_t n = 0; n < rxNodes.GetN(); n++)
 	    rxMobility.Install (rxNodes.Get(n));
-	
+
+	for (uint32_t n = 0; n < rxNodes.GetN(); n++){
+		NS_LOG_UNCOND(rxNodes.Get(n)->GetObject<MobilityModel> ()->GetPosition());	
+	}
+
 	InternetStackHelper stack;
 	stack.Install (txNodes);
 	stack.Install (rxNodes);
@@ -206,7 +209,7 @@ main (int argc, char *argv[])
 	onoff.SetAttribute("OffTime",StringValue("ns3::ConstantRandomVariable[Constant=0]"));
 	onoff.SetAttribute ("PacketSize", UintegerValue(1400));
 	onoff.SetAttribute ("DataRate", StringValue ("2Mbps"));
-	onoff.SetAttribute ("MaxBytes", UintegerValue (1400*10));
+	onoff.SetAttribute ("MaxBytes", UintegerValue (0));
 
 	ApplicationContainer txApp = onoff.Install (txNodes.Get (0));
 
@@ -225,10 +228,7 @@ main (int argc, char *argv[])
 	for (uint32_t i=0; i<allDevice.GetN(); i++){
   		Ptr<WifiNetDevice> dev = allDevice.Get(i)->GetObject<WifiNetDevice> ();
 		Ptr<AdhocWifiMac> mac = dev->GetMac()->GetObject<AdhocWifiMac> ();
-			
-		if (i==1)
-				mac->SetTarget(true);
-
+		mac->SetAid(i);
 		Simulator::Schedule (Seconds (i*2), &StartTl, mac);
 	}
 	

@@ -523,6 +523,7 @@ public:
    */
   void RegisterBlockAckListenerForAc (enum AcIndex ac, MacLowBlockAckEventListener *listener);
   double GetRxSnr(void);
+  uint8_t GetRxMcs(void);
 
 private:
   void CancelAllEvents (void);
@@ -686,6 +687,7 @@ private:
 	void SetRxSnrVector (double rxSnr);
 	uint32_t m_rxSnrVectorSize;
 	double m_rxSnr;
+	uint8_t m_rxMcs;
 	// type 1 EWMA
 	double m_ewmaSnr;
 	double m_alpha;
