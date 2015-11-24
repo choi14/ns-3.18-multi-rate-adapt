@@ -485,6 +485,7 @@ AdhocWifiMac::GroupRateAdaptation ()
 				// N*Duration Rate Adaptation 
 				if(m_ratype == 0)
 				{
+					uint8_t temp_n = 0;
 					WifiPreamble preamble = WIFI_PREAMBLE_LONG;
 					WifiTxVector v;
 					v.SetMode (mode);
@@ -508,6 +509,7 @@ AdhocWifiMac::GroupRateAdaptation ()
 					if(m_firstnt == true)
 					{
 						m_GroupTxMode = mode;
+						m_burstsize= temp_n;
 						m_minNT = nt;
 						m_burstsize = tempBurstsize;
 						m_firstnt = false;
