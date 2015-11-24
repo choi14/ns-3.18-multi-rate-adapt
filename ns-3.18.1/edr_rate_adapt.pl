@@ -1,26 +1,26 @@
 use warnings;
 use strict;
 
-my $seedNum = 100;
-my $numVal = 4;
+my $seedNum = 50;
+my $numVal = 1;
 my $i = 0;
 my $seed = 0;
 #my $period = 1000;
 
-foreach my $bound (10, 20){
+foreach my $bound (20, 30){
 	foreach my $period (100, 200, 500, 1000){
 		foreach my $doppler (0.1){
 			foreach my $numNode (1, 10){
 
 				print "Bound: $bound Period: $period Doppler: $doppler NumNode: $numNode\n";
-				my $output_filename1="storage_results/output_edr_151119/result_per-"."$period"."-"."$doppler"."-"."$numNode"."-"."$bound".".txt";
+				my $output_filename1="storage_results/output_edr_151125/result_per-"."$period"."-"."$doppler"."-"."$numNode"."-"."$bound".".txt";
 				open(OUT1, ">$output_filename1") ||die "Failed opening.\n";
-				my $output_filename2="storage_results/output_edr_151119/result_air-"."$period"."-"."$doppler"."-"."$numNode"."-"."$bound".".txt";
+				my $output_filename2="storage_results/output_edr_151125/result_air-"."$period"."-"."$doppler"."-"."$numNode"."-"."$bound".".txt";
 				open(OUT2, ">$output_filename2") ||die "Failed opening.\n";
-				my $output_filename3="storage_results/output_edr_151119/result_node-"."$period"."-"."$doppler"."-"."$numNode"."-"."$bound".".txt";
+				my $output_filename3="storage_results/output_edr_151125/result_node-"."$period"."-"."$doppler"."-"."$numNode"."-"."$bound".".txt";
 				open(OUT3, ">$output_filename3") ||die "Failed opening.\n";
 
-				foreach my $eta (0, 0.5, 1.0, 1.5, 2.0){
+				foreach my $eta (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10){
 
 					my @per_a = (0)x$numVal;	
 					my @per_s = (0)x$numVal;	
@@ -30,8 +30,8 @@ foreach my $bound (10, 20){
 					my @node_s = (0)x$numVal;	
 					my $type = 0;
 
-					foreach my $rho (0.1, 0.2){
-						foreach my $delta (0.1, 0.2){
+					foreach my $rho (0.1){
+						foreach my $delta (0.1){
 
 							#print "Rho: $rho Delta: $delta\n";
 							my @per = (0)x$seedNum;
@@ -46,7 +46,7 @@ foreach my $bound (10, 20){
 
 							#foreach my $seed (0, 10, 20, 30, 40, 50, 60, 70, 80, 90){
 							for ($seed = 0; $seed < $seedNum; $seed++){
-								my $input_filename= "storage_results/result_edr_151119/edr_"."$eta"."_"."$delta"."_"."$rho"."_"."$seed"."_"."$numNode"."_"."$period"."_"."$doppler"."_"."$bound".".txt";
+								my $input_filename= "storage_results/result_edr_151125/edr_"."$eta"."_"."$delta"."_"."$rho"."_"."$seed"."_"."$numNode"."_"."$period"."_"."$doppler"."_"."$bound".".txt";
 								open(IN, "$input_filename") ||die "Failed opening $input_filename.\n";
 
 								my @per_seed = (0)x$numNode;
@@ -80,7 +80,7 @@ foreach my $bound (10, 20){
 
 								for ($i = 0; $i < $numNode; $i++)
 								{
-									if($per_seed[$i] < 0.2)
+									if($per_seed[$i] < 0.005)
 									{
 										$satisfyNode++;
 									}
@@ -123,14 +123,14 @@ foreach my $bound (10, 20){
 						}#delta
 					}# rho
 
-					print OUT1 "$eta $per_a[0] $per_s[0] $per_a[1] $per_s[1] $per_a[2] $per_s[2] $per_a[3] $per_s[3]\n";
-					print OUT2 "$eta $air_a[0] $air_s[0] $air_a[1] $air_s[1] $air_a[2] $air_s[2] $air_a[3] $air_s[3]\n";
-					print OUT3 "$eta $node_a[0] $node_s[0] $node_a[1] $node_s[1] $node_a[2] $node_s[2] $node_a[3] $node_s[3]\n";
+					print OUT1 "$eta $per_a[0] $per_s[0]\n";
+					print OUT2 "$eta $air_a[0] $air_s[0]\n";
+					print OUT3 "$eta $node_a[0] $node_s[0]\n";
 
 					print "---------------------------------------------------------------------------\n";
-					print "$eta $per_a[0] $per_s[0] $per_a[1] $per_s[1] $per_a[2] $per_s[2] $per_a[3] $per_s[3]\n";
-					print "$eta $air_a[0] $air_s[0] $air_a[1] $air_s[1] $air_a[2] $air_s[2] $air_a[3] $air_s[3]\n";
-					print "$eta $node_a[0] $node_s[0] $node_a[1] $node_s[1] $node_a[2] $node_s[2] $node_a[3] $node_s[3]\n";
+					print "$eta $per_a[0] $per_s[0]\n";
+					print "$eta $air_a[0] $air_s[0]\n";
+					print "$eta $node_a[0] $node_s[0]\n";
 					print "---------------------------------------------------------------------------\n";
 
 				}# eta

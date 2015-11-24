@@ -591,15 +591,16 @@ void
 MacLow::CalculateEDR (void)
 {
 	m_avgRssi = (1-m_delta)*m_avgRssi + m_delta*10*std::log10(m_rxRssi);
+	
 	m_avgSnr = (1-m_delta)*m_avgSnr + m_delta*10*std::log10(m_rxSnr);
 	
 	double snrDiff = m_avgSnr - 10*std::log10(m_rxSnr);
 	double rssiDiff = m_avgRssi - 10*std::log10(m_rxRssi);
 	
 	if(rssiDiff > 0)
-		m_devRssi = (1-m_rho)*m_devRssi + m_rho*snrDiff;
+		m_devRssi = (1-m_rho)*m_devRssi + m_rho*rssiDiff;
 	else
-		m_devRssi = (1-m_rho)*m_devRssi - m_rho*snrDiff;
+		m_devRssi = (1-m_rho)*m_devRssi - m_rho*rssiDiff;
 	
 	if(snrDiff > 0)
 		m_devSnr = (1-m_rho)*m_devSnr + m_rho*snrDiff;
@@ -607,11 +608,10 @@ MacLow::CalculateEDR (void)
 		m_devSnr = (1-m_rho)*m_devSnr - m_rho*snrDiff;
 
 	
-	m_estRssi = m_avgSnr - m_eta*m_devRssi;
+	m_estRssi = m_avgRssi - m_eta*m_devRssi;
 	m_estSnr = m_avgSnr - m_eta*m_devSnr;
 
 	NS_LOG_INFO("m_estRssi: " << m_estRssi << " m_estSnr: " << m_estSnr);
-
 }
 double
 MacLow::GetRxSnr (void)

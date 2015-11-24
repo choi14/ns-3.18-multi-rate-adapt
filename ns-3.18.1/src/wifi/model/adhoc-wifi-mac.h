@@ -115,6 +115,7 @@ private:
 	double m_rho;
 	double m_per;
 	double m_minSnr;
+	double m_minSnrLinear;
 	double m_minRssi;
 	double m_minNT;
 	uint32_t m_ratype;

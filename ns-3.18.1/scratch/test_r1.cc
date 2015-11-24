@@ -66,7 +66,7 @@ main (int argc, char *argv[])
 	uint32_t txNodeNum = 1;
 	uint32_t rxNodeNum = 1;
 	uint32_t seed = 1; // 1:1:100 
-	uint32_t rateAdaptType = 0; // 0 or 1 0-> per over 0.001 1-> maximun throughput 
+	uint32_t rateAdaptType = 0; // 0, 1, 2 (0 = n*t) 
 	uint32_t feedbackType = 3; // 0, 1, 2, 3
 	uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 100; // MilliSeconds
@@ -177,12 +177,12 @@ main (int argc, char *argv[])
 			"Y", StringValue (Rectangle.str ()));
 	rxMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   rxMobility.Install (rxNodes);
-
+	/*
 	for (uint32_t i=0; i < rxNodes.GetN(); i++)
 	{
 		std::cout <<	 rxNodes.Get(i)->GetObject<MobilityModel> ()->GetPosition() << std::endl;
 	}
-
+*/
 	InternetStackHelper stack;
 	stack.Install (txNodes);
 	stack.Install (rxNodes);
@@ -240,22 +240,22 @@ main (int argc, char *argv[])
 		case 0:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " percentile: " << percentile << " bound: " << bound);
-			out_filename << "storage_results/result_151119/per_" << percentile << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_151125/per_" << percentile << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 1:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " alpha: " << alpha << " bound: " << bound);
-			out_filename << "storage_results/result_151119/alp_" <<   alpha   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_151125/alp_" <<   alpha   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 2:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " beta: " << beta << " bound: " << bound);
-			out_filename << "storage_results/result_151119/bet_" <<   beta   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_151125/bet_" <<   beta   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 3: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound);
-			out_filename << "storage_results/result_edr_test/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_edr_151125/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 	}
 
 	fout.open(out_filename.str().c_str(), std::ostream::out);

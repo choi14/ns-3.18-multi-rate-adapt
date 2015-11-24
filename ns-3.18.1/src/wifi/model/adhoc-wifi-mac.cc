@@ -121,6 +121,7 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_feedbackPeriod = 100;
 	m_addBasicModes = 0;
 	m_minSnr = 0.0;
+	m_minSnrLinear = 0.0;
 	m_minNT = 0.0;
 	m_max = 100;
 	m_tf_id = 0;
@@ -229,7 +230,7 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 
 		  if(m_MNC_Encoder.GetBufferSize() == m_MNC_K){
 				  m_src_eid++;
-				  NS_LOG_ERROR("Source send, eid: " << m_src_eid);
+				  NS_LOG_ERROR("Source send, eid: " << m_src_eid << " m_burstsize: " << (uint16_t)m_burstsize << " MCS: " << (uint16_t)m_mcast_mcs);
 						  m_MNC_Encoder.Encoding(m_src_eid, m_MNC_K, m_burstsize, m_MNC_P, sys);
 						  for(uint8_t i = 0; i < m_burstsize; i++){ 
 								  WifiMacHeader temphdr;
@@ -297,9 +298,11 @@ AdhocWifiMac::UpdateInfo (Mac48Address addr, struct rxInfo info)
 		stainfo.info = info;
 		m_infos.push_back(stainfo);
 	}
+	/*
 	for (uint32_t i = 0; i < m_infos.size(); i++){
 		NS_LOG_ERROR("Addr " << m_infos[i].addr); 
 	}
+	*/
 }
 
 void
@@ -436,13 +439,14 @@ AdhocWifiMac::GroupRateAdaptation ()
 				m_minSnr = (double)m_infos[m].info.Snr;
 			}
 		}
+
 		NS_LOG_INFO("m_minSnr(dB): " << m_minSnr <<
 				" m_minSnr(ratio): " << std::pow(10.0, m_minSnr/10.0)); 
 
-		if(m_minSnr > 1.0)
+		if(m_minSnr > 3.0)
 		{
 			m_firstnt = true;
-			m_minSnr = std::pow (10.0, m_minSnr/10.0); // m_minSnr: log->linear
+			m_minSnrLinear = std::pow (10.0, m_minSnr/10.0); // m_minSnrLinear: log->linear
 			uint32_t NBasicMode = m_stationManager->GetNBasicModes ();
 			double Per = 1.0;
 			double Pdr = 0.0;			
@@ -475,7 +479,7 @@ AdhocWifiMac::GroupRateAdaptation ()
 					ofdmbits = 288;
 
 				uint32_t databits = 1000;
-				double nSymbols = ((databits+64)*8+22)/coderate/ofdmbits;
+				double nSymbols = ((databits+80)*8+22)/coderate/ofdmbits;
 				uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
 
 				// N*Duration Rate Adaptation 
@@ -490,28 +494,31 @@ AdhocWifiMac::GroupRateAdaptation ()
 					v.SetNess (0);
 					v.SetStbc (false);
 
-					Pdr = m_phy->CalculatePdr (mode, m_minSnr, nbits);
-					m_burstsize = KtoNTable[m_k-1][(uint32_t)Pdr*100];
-					NS_LOG_INFO("m_k: " << (uint16_t)m_k << " Pdr: " << (uint32_t)Pdr*100 << " Pdr: " << Pdr);
+					Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
+					uint8_t tempBurstsize = KtoNTable[m_k-1][(int)(Pdr*100)];
+					if((tempBurstsize < 13) && (tempBurstsize > 0))
+					{
+						tempBurstsize = 13;
+					}
+					NS_LOG_INFO("m_k: " << (uint16_t)m_k << " Pdr: " << (int)(Pdr*100) << " Pdr: " << Pdr);
 					duration = m_phy->CalculateTxDuration(databits+80, v, preamble); 
-					double nt = m_burstsize * duration.GetDouble ();
+					double nt = tempBurstsize * duration.GetMicroSeconds ();
 					NS_LOG_INFO("Duration: " << duration << " m_burstsize: " << (uint32_t)m_burstsize << " nt: " << nt);
 					
 					if(m_firstnt == true)
 					{
-						NS_LOG_INFO("m_firstnt: " << m_firstnt);
 						m_GroupTxMode = mode;
 						m_minNT = nt;
+						m_burstsize = tempBurstsize;
 						m_firstnt = false;
 					}
 					else
 					{
-						NS_LOG_INFO("m_firstnt: " << m_firstnt);
-						NS_LOG_INFO("mode: " << mode.GetDataRate ()*0.000001 << " minNT: " << m_minNT);
 						if ((nt < m_minNT) && (nt != 0))
 						{
 							m_GroupTxMode = mode;
 							m_minNT = nt;
+							m_burstsize = tempBurstsize;
 						}
 					}
 				}//m_ratype == 0
@@ -519,7 +526,7 @@ AdhocWifiMac::GroupRateAdaptation ()
 				// PER-SNR Rate Adaptation
 				else if(m_ratype == 1)
 				{
-					Pdr = m_phy->CalculatePdr (mode, m_minSnr, nbits);
+					Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
 					double tempPer = 1-Pdr;
 					NS_LOG_INFO("mode: " << mode.GetDataRate ()*0.000001 << " tempPer: " << tempPer);
 					if(tempPer < m_per)
@@ -538,7 +545,7 @@ AdhocWifiMac::GroupRateAdaptation ()
 				// Throughput-SNR Rate Adaptation
 				else if (m_ratype == 2)
 				{
-					Pdr = m_phy->CalculatePdr (mode, m_minSnr, nbits);
+					Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
 					Rate = mode.GetDataRate();
 					PdrRate = Pdr*Rate*0.000001;
 
@@ -558,7 +565,7 @@ AdhocWifiMac::GroupRateAdaptation ()
 					m_burstsize = KtoNTable[m_k-1][(uint32_t)(1-Per)*100];
 				}//m_ratype==2
 
-			} // for - NBasicMode
+			} // for - NBasicMod
 		
 			int tmpGroupTxMode = m_GroupTxMode.GetDataRate()*0.000001;
 			switch (tmpGroupTxMode)
@@ -580,6 +587,13 @@ AdhocWifiMac::GroupRateAdaptation ()
 				case 54:
 					m_GroupTxMcs = 7;	break;
 			}
+
+			if(m_minNT == 0)
+			{
+				m_GroupTxMcs = 0;
+				m_minNT = 30;
+			}
+
 			NS_LOG_INFO ("m_minSnr: " << m_minSnr
 					<< " GroupTxDataRate: " <<  m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s"
 					<< " GroupTxMcs: " << m_GroupTxMcs);
@@ -588,6 +602,7 @@ AdhocWifiMac::GroupRateAdaptation ()
 		{
 			NS_LOG_INFO("m_minSnr: " << m_minSnr << " < 1 and selectBasicMode");
 			m_GroupTxMcs = 0;
+			m_minNT = 30;
 		}
 	} // vsize != 0
 	return m_GroupTxMcs;
