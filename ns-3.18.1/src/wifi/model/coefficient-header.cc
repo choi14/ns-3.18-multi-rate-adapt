@@ -55,6 +55,7 @@ CoefficientHeader::CoefficientHeader (uint16_t eid, uint8_t p, uint8_t k, std::v
 	m_p = p;
 	m_k = k;
 	m_seq = 0;
+	m_n = k;
 	m_coeffi = coeffi;
 }
 
@@ -64,13 +65,24 @@ CoefficientHeader::CoefficientHeader (uint16_t eid, uint8_t p, uint8_t k, uint16
 	m_p = p;
 	m_k = k;
 	m_seq = seq;
+	m_n = k;
+	m_coeffi = coeffi;
+}
+
+CoefficientHeader::CoefficientHeader (uint16_t eid, uint8_t p, uint8_t k, uint8_t n, uint16_t seq, std::vector<uint8_t> coeffi)  // Use this
+{
+	m_eid = eid;
+	m_p = p;
+	m_k = k;
+	m_seq = seq;
+	m_n = n;
 	m_coeffi = coeffi;
 }
 
 uint32_t
 CoefficientHeader::GetSerializedSize (void) const
 {
-  return (uint32_t) 6+m_p*m_p*m_k;
+  return (uint32_t) 7+m_p*m_p*m_k;
 	//std::cout << "GetSerializedSize" << (uint16_t) (4 + m_p * m_p * m_k) << std::endl;
 }
 
@@ -80,6 +92,7 @@ CoefficientHeader::Serialize (Buffer::Iterator i) const
 	i.WriteU16(m_eid);
 	i.WriteU8(m_p);
 	i.WriteU8(m_k);
+	i.WriteU8(m_n);
     i.WriteU16(m_seq);
 	uint32_t size = (uint32_t)m_p*m_p*m_k;
 	for (uint32_t j = 0; j < size; j++)
@@ -95,6 +108,7 @@ CoefficientHeader::Deserialize (Buffer::Iterator start)
 	m_eid = i.ReadU16 ();
 	m_p = i.ReadU8 ();
 	m_k = i.ReadU8 ();
+	m_n = i.ReadU8 ();
     m_seq = i.ReadU16 ();
 //	std::cout << "CoefficientHeader::Deserialize : " << (uint16_t) m_eid << ", " << (uint16_t) m_p << ", " << (uint16_t) m_k << ", ";
 
@@ -139,6 +153,18 @@ CoefficientHeader::GetK (void) const
 }
 
 void
+CoefficientHeader::SetN (uint8_t n)
+{
+	m_n = n;
+}
+
+uint8_t
+CoefficientHeader::GetN (void) const
+{
+	return m_n;
+}
+
+void
 CoefficientHeader::SetEid (uint16_t eid)
 {
 	m_eid = eid;
@@ -160,6 +186,8 @@ CoefficientHeader::GetSeq (void) const
 {
   return m_seq;
 }
+
+
 
 void
 CoefficientHeader::SetCoeffi (std::vector<uint8_t> coeffi)

@@ -109,6 +109,11 @@ AdhocWifiMac::GetTypeId (void)
 				DoubleValue (0.1),
 				MakeDoubleAccessor (&AdhocWifiMac::m_rho),
 				MakeDoubleChecker<double> ())
+		.AddAttribute ("NumTraining", "Number of training packets per mcs", 
+				UintegerValue(100),
+				MakeUintegerAccessor (&AdhocWifiMac::m_max),
+				MakeUintegerChecker<uint16_t> ())
+
   ;
   return tid;
 }
@@ -134,6 +139,8 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_MNC_K = 10;
 	m_MNC_P = 1;
 	m_k = 10;	
+	m_aid = 0;
+	start_nc = false;
 
 	for(uint8_t i=0; i<8; i++)
 	{
@@ -404,7 +411,7 @@ AdhocWifiMac::SendFeedback ()
   hdr.SetAddr3 (GetBssid ());
   hdr.SetDsNotFrom ();
   hdr.SetDsNotTo ();
-	
+
 	m_rxInfoGet = m_low->GetRxInfo (m_fbtype, m_percentile, m_alpha, m_beta, m_eta, m_delta, m_rho);
   Ptr<Packet> packet = Create<Packet> ();
   FeedbackHeader FeedbackHdr; // Set RSSI, SNR, txPacket, TotalPacket
@@ -420,7 +427,7 @@ AdhocWifiMac::SendFeedback ()
 			<<" LossPacket: " << m_rxInfoGet.LossPacket << " TotalPacket: " << m_rxInfoGet.TotalPacket);
 
 	NS_LOG_INFO ("[tx feedback packet]" 
-			<< " perMCS0: " << (int)m_rxInfoGet.perRate.perMCS0 << " perMCS1: " << (int)m_rxInfoGet.perRate.perMCS1 
+			<< " perMCS0: " << (int)m_rxInfoGet.perRate.perMCS0 << " perMCS1: " << m_rxInfoGet.perRate.perMCS1 
 			<< " perMCS2: " << (int)m_rxInfoGet.perRate.perMCS2 << " perMCS3: " << (int)m_rxInfoGet.perRate.perMCS3 
 			<< " perMCS4: " << (int)m_rxInfoGet.perRate.perMCS4 << " perMCS5: " << (int)m_rxInfoGet.perRate.perMCS5 
 			<< " perMCS6: " << (int)m_rxInfoGet.perRate.perMCS6 << " perMCS7: " << (int)m_rxInfoGet.perRate.perMCS7);
@@ -786,6 +793,25 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 
 		uint16_t eid = coeffi.GetEid();
 		uint16_t seq = coeffi.GetSeq();
+		uint8_t rate = m_low->GetRxMcs();
+		double snr = m_low->GetRxSnr();
+		uint32_t snr_db =(uint32_t)(10*std::log10(snr));
+
+		if (start_nc == false){
+			for (uint8_t i=0; i < 8; i++){	
+				m_tableManager->FillingBlank(i);
+			}
+			m_tableManager->Monotonicity();
+
+  			//NS_LOG_UNCOND("AID " << m_aid << " Init table");
+			//m_tableManager->PrintOnlineTable(std::cout);
+
+			uint8_t n = coeffi.GetN();
+			m_tableManager->SetN((uint16_t)n);
+			start_nc = true;
+		}
+
+		m_tableManager->UpdateTable(seq, eid, rate, snr_db);	
 		NS_LOG_ERROR("Eid: " << eid << "Seq: " << seq);
 
 		if (eid <= m_last_eid)
@@ -865,6 +891,11 @@ AdhocWifiMac::SetBasicModes(void)
 	m_tableManager->SetRemoteStation(m_stationManager);
 	m_tableManager->SetPhy(m_phy);
 	m_tableManager->GenerateCorrectTable();
+}
+
+void
+AdhocWifiMac::SetAid(uint32_t aid){
+		m_aid = aid;
 }
 
 } // namespace ns3

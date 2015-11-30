@@ -522,6 +522,7 @@ public:
    */
   void RegisterBlockAckListenerForAc (enum AcIndex ac, MacLowBlockAckEventListener *listener);
   double GetRxSnr(void);
+  uint8_t GetRxMcs(void);
 
 private:
   void CancelAllEvents (void);
@@ -743,6 +744,7 @@ private:
   typedef std::map<AcIndex, MacLowBlockAckEventListener*> QueueListeners;
   QueueListeners m_edcaListeners;
   bool m_ctsToSelfSupported;
+  uint8_t m_rxMcs;
 };
 
 } // namespace ns3
