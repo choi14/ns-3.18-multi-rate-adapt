@@ -42,6 +42,7 @@ public:
    */
   CoefficientHeader();
   CoefficientHeader(uint16_t eid, uint8_t p, uint8_t k, uint16_t seq, std::vector<uint8_t> coeffi);
+  CoefficientHeader(uint16_t eid, uint8_t p, uint8_t k, uint8_t n, uint16_t seq, std::vector<uint8_t> coeffi);
   CoefficientHeader(uint16_t eid, uint8_t p, uint8_t k, std::vector<uint8_t> coeffi);
 
   virtual uint32_t GetSerializedSize (void) const;
@@ -56,10 +57,12 @@ public:
    */
   void SetP (uint8_t p);
   void SetK (uint8_t k);
+  void SetN (uint8_t n);
   void SetEid (uint16_t id);
   void SetSeq (uint16_t seq);
   uint8_t GetP (void) const;
   uint8_t GetK (void) const;
+  uint8_t GetN (void) const;
   uint16_t GetEid (void) const;
   uint16_t GetSeq (void) const;
 
@@ -71,6 +74,7 @@ private:
   uint16_t m_seq;
   uint8_t m_p;
   uint8_t m_k;
+  uint8_t m_n;
   std::vector<uint8_t> m_coeffi;
 
 };

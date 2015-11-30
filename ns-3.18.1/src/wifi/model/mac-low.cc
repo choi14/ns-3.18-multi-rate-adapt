@@ -629,7 +629,11 @@ MacLow::GetRxSnr (void)
 {
 		return m_rxSnr;
 }
-
+uint8_t
+MacLow::GetRxMcs (void)
+{
+		return m_rxMcs;
+}
 // jychoi
 void
 MacLow::CalculatePerOfRate (void)
@@ -1187,6 +1191,10 @@ MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rxRssi,  WifiMode tx
 					NS_LOG_DEBUG ("rx group from=" << hdr.GetAddr2 ());
 					m_rxInfo.TotalPacket++; //jychoi
 					m_rxSnr = rxSnr;
+					for (uint32_t i = 0; i < m_stationManager->GetNBasicModes(); i++){
+						if (m_stationManager->GetBasicMode(i) == txMode)
+								m_rxMcs = i;
+					}
 					m_rxRssi = rxRssi;
 					NS_LOG_INFO ("[rx group] m_rxRssi: " << m_rxRssi << " m_rxSnr: " << m_rxSnr);
 					CalculateEwma ();

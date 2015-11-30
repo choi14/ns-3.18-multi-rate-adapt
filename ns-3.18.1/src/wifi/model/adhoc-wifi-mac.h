@@ -90,6 +90,7 @@ public:
   void SetBasicModes(void);
 	struct rxInfo m_rxInfoSet;
   struct rxInfo m_rxInfoGet;
+  void SetAid (uint32_t aid);
 
 private:
   virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
@@ -142,6 +143,9 @@ private:
 	bool m_nc_enabled;
 	uint8_t m_MNC_K;
 	uint8_t m_MNC_P;
+	
+	uint32_t m_aid;
+	bool start_nc;
 };
 
 } // namespace ns3

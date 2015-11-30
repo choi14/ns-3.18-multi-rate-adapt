@@ -171,7 +171,7 @@ namespace ns3{
 			else if(eid == m_last_eid){
 					seq = m_last_seq + l + 1;
 			}
-			CoefficientHeader coeffi_hdr(eid, p, k, seq, coeffi);
+			CoefficientHeader coeffi_hdr(eid, p, k, n, seq, coeffi);
 			sendpacket->AddHeader(coeffi_hdr);
 			m_MNCbuffer_N->Enqueue(sendpacket, tmphdr);
 		}
@@ -221,7 +221,7 @@ namespace ns3{
 				else if(eid == m_last_eid){
 						seq = m_last_seq + i + 1;
 				}
-				CoefficientHeader coeffi_hdr(eid, p, k, seq, coeffi);
+				CoefficientHeader coeffi_hdr(eid, p, k, n, seq, coeffi);
 				temp->AddHeader(coeffi_hdr);
 				m_MNCbuffer_N->Enqueue(temp, tmphdr);
 				//std::cout << "temppacket = " << temppacket->GetSize() << std::endl;
@@ -245,7 +245,7 @@ namespace ns3{
 				else if(eid == m_last_eid){
 						seq = m_last_seq + i + 1;
 				}
-				CoefficientHeader coeffi_hdr(eid, p, k, seq, coeffi);
+				CoefficientHeader coeffi_hdr(eid, p, k, n, seq, coeffi);
 				temp->AddHeader(coeffi_hdr);
 				m_MNCbuffer_N->Enqueue(temp, tmphdr);
 			}
@@ -383,7 +383,7 @@ namespace ns3{
 		uint8_t *Coeff_Matrix = new uint8_t[rcv_num*k*p*p];
 		std::vector<uint8_t> tempvector;
 		uint16_t cm_count = 0;
-		//uint16_t id = 0;
+		uint16_t id = 0;
 		WifiMacHeader tempheader;
 		Ptr<Packet> ori_packet = Create<Packet>();
 		Ptr<WifiMacQueue> tempRxBuffer = CreateObject<WifiMacQueue> ();
@@ -400,7 +400,7 @@ namespace ns3{
 			CoefficientHeader coeffi_hdr;
 			ori_packet->RemoveHeader(coeffi_hdr);	
 
-			//id = coeffi_hdr.GetEid();
+			id = coeffi_hdr.GetEid();
 			
 			//if(m_eid != id){
 			//	std::cout << "ERRRRRRORR" << std::endl;
@@ -414,7 +414,7 @@ namespace ns3{
 				Coeff_Matrix[cm_count] = tempvector[i];
 				cm_count++;
 			}
-			//NS_LOG_DEBUG("ID: " << id << " m_MNCbuffer_Rx2  " << m_MNCbuffer_Rx->GetSize() << "  size of coeff: " << tempvector.size() << "  size of Coeff Matrix: " << cm_count);
+			NS_LOG_DEBUG("ID: " << id << " m_MNCbuffer_Rx2  " << m_MNCbuffer_Rx->GetSize() << "  size of coeff: " << tempvector.size() << "  size of Coeff Matrix: " << cm_count);
 		}	
 
 		NS_LOG_DEBUG("m_MNCbuffer_Rx3  " << m_MNCbuffer_Rx->GetSize());			
