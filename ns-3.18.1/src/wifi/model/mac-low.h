@@ -522,6 +522,7 @@ public:
    */
   void RegisterBlockAckListenerForAc (enum AcIndex ac, MacLowBlockAckEventListener *listener);
   double GetRxSnr(void);
+  uint8_t GetRxMcs(void);
 
 private:
   void CancelAllEvents (void);
@@ -697,6 +698,7 @@ private:
 	void CalculateEDR (void);
 	void SetRxSnrVector (double rxSnr);
 	void SetRxRssiVector (double rxRssi);
+	double MacLowCalculatePdr (uint32_t k, double currentSnr);
 	uint32_t m_rxSnrVectorSize;
 	uint32_t m_rxRssiVectorSize;
 	double m_rxSnr;
@@ -718,6 +720,8 @@ private:
 	double m_avgRssi;
 	double m_devRssi;
 	double m_estRssi;
+
+	double m_snrLinear;
   
 	// Listerner needed to monitor when a channel switching occurs.
   class PhyMacLowListener * m_phyMacLowListener;
@@ -743,6 +747,7 @@ private:
   typedef std::map<AcIndex, MacLowBlockAckEventListener*> QueueListeners;
   QueueListeners m_edcaListeners;
   bool m_ctsToSelfSupported;
+  uint8_t m_rxMcs;
 };
 
 } // namespace ns3

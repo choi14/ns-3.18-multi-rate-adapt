@@ -629,7 +629,11 @@ MacLow::GetRxSnr (void)
 {
 		return m_rxSnr;
 }
-
+uint8_t
+MacLow::GetRxMcs (void)
+{
+		return m_rxMcs;
+}
 // jychoi
 void
 MacLow::CalculatePerOfRate (void)
@@ -770,7 +774,8 @@ MacLow::GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta
 			break;
 		} // case 2
 		
-		case 3: // RAM using eta, delta, rho 
+		case 3:
+		case 4: // RAM using eta, delta, rho 
 		{
 			CalculatePerOfRate ();
 			NS_LOG_INFO ("feedbackType: " << fbtype << " eta: " << eta << " delta: " << delta << " rho: " << rho);
@@ -781,6 +786,17 @@ MacLow::GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta
 			m_rxInfo.Rssi = (int32_t)m_estRssi;
 			m_rxInfo.Snr = (int32_t)m_estSnr;
 			
+			double currentSnr = m_estSnr;
+			m_rxInfo.perRate.perMCS0 = MacLowCalculatePdr(0, currentSnr);
+			m_rxInfo.perRate.perMCS1 = MacLowCalculatePdr(1, currentSnr);
+			m_rxInfo.perRate.perMCS2 = MacLowCalculatePdr(2, currentSnr);
+			m_rxInfo.perRate.perMCS3 = MacLowCalculatePdr(3, currentSnr);
+			m_rxInfo.perRate.perMCS4 = MacLowCalculatePdr(4, currentSnr);
+			m_rxInfo.perRate.perMCS5 = MacLowCalculatePdr(5, currentSnr);
+			m_rxInfo.perRate.perMCS6 = MacLowCalculatePdr(6, currentSnr);
+			m_rxInfo.perRate.perMCS7 = MacLowCalculatePdr(7, currentSnr);
+			
+			/*
 			m_rxInfo.perRate.perMCS0 = m_perOfRate[0];
 			m_rxInfo.perRate.perMCS1 = m_perOfRate[1];
 			m_rxInfo.perRate.perMCS2 = m_perOfRate[2];
@@ -789,6 +805,7 @@ MacLow::GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta
 			m_rxInfo.perRate.perMCS5 = m_perOfRate[5];
 			m_rxInfo.perRate.perMCS6 = m_perOfRate[6];
 			m_rxInfo.perRate.perMCS7 = m_perOfRate[7];
+			*/
 
 			m_eta = eta;
 			m_delta = delta;
@@ -799,6 +816,42 @@ MacLow::GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta
 	} // switch end
 	return m_rxInfo;
 } // GetRxInfo end
+
+double
+MacLow::MacLowCalculatePdr(uint32_t k, double currentSnr)
+{
+	WifiMode mode = m_stationManager->GetBasicMode(k);
+	
+	double coderate = 1.0;
+	if(mode.GetCodeRate () == WIFI_CODE_RATE_3_4)
+		coderate = 3.0/4.0;
+	else if(mode.GetCodeRate () == WIFI_CODE_RATE_2_3)
+		coderate = 2.0/3.0;
+	else if(mode.GetCodeRate () == WIFI_CODE_RATE_1_2)
+		coderate = 1.0/2.0;
+	else if(mode.GetCodeRate () == WIFI_CODE_RATE_5_6)
+		coderate = 5.0/6.0;
+
+	uint32_t ofdmbits = 48; // Coded bits per OFDM symbols
+	if(mode.GetPhyRate () == 12000000)
+		ofdmbits = 48;
+	else if(mode.GetPhyRate () == 24000000)
+		ofdmbits = 96;
+	else if(mode.GetPhyRate () == 48000000)
+		ofdmbits = 192;
+	else if(mode.GetPhyRate () == 72000000)
+		ofdmbits = 288;
+
+	uint32_t databits = 1000;
+	double nSymbols = ((databits+80)*8+22)/coderate/ofdmbits;
+	uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
+
+	m_snrLinear = std::pow (10.0, m_rxInfo.Snr/10.0); // m_minSnrLinear: log->linear
+	double Pdr = m_phy->CalculatePdr (mode, m_snrLinear, nbits);
+
+	return Pdr*1000;
+}
+
 
 void
 MacLow::SetRxCallback (Callback<void,Ptr<Packet>,const WifiMacHeader *> callback)
@@ -1187,6 +1240,10 @@ MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rxRssi,  WifiMode tx
 					NS_LOG_DEBUG ("rx group from=" << hdr.GetAddr2 ());
 					m_rxInfo.TotalPacket++; //jychoi
 					m_rxSnr = rxSnr;
+					for (uint32_t i = 0; i < m_stationManager->GetNBasicModes(); i++){
+						if (m_stationManager->GetBasicMode(i) == txMode)
+								m_rxMcs = i;
+					}
 					m_rxRssi = rxRssi;
 					NS_LOG_INFO ("[rx group] m_rxRssi: " << m_rxRssi << " m_rxSnr: " << m_rxSnr);
 					CalculateEwma ();
