@@ -819,7 +819,7 @@ YansWifiPhy::EndReceive (Ptr<Packet> packet, Ptr<InterferenceHelper::Event> even
       /* failure. */
       NotifyRxDrop (packet);
       //m_state->SwitchFromRxEndError (packet, snrPer.snr);
-      m_state->SwitchFromRxEndError (packet, snrPer.snr, snrPer.rssi);
+      m_state->SwitchFromRxEndError (packet, snrPer.snr, snrPer.rssi, event->GetPayloadMode ()); //jychoi
     }
 }
 

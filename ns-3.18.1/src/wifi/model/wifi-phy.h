@@ -158,7 +158,7 @@ public:
    * arg2: snr of packet
    * arg3: rssi of packet
    */
-  typedef Callback<void,Ptr<const Packet>, double, double> RxErrorCallback;
+  typedef Callback<void,Ptr<const Packet>, double, double, WifiMode> RxErrorCallback;
 
   static TypeId GetTypeId (void);
 

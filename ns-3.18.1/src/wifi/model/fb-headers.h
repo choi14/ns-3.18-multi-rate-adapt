@@ -7,12 +7,25 @@
 
 namespace ns3 {
 
+typedef struct
+{
+	uint16_t perMCS0;
+	uint16_t perMCS1;
+	uint16_t perMCS2;
+	uint16_t perMCS3;
+	uint16_t perMCS4;
+	uint16_t perMCS5;
+	uint16_t perMCS6;
+	uint16_t perMCS7;
+}PerRate;
+
 struct rxInfo
 {
 	int32_t Rssi;
 	int32_t Snr;
 	uint32_t LossPacket;
 	uint32_t TotalPacket;
+	PerRate perRate;
 };
 
 class FeedbackHeader : public Header
@@ -29,18 +42,20 @@ public:
 	void SetSnr (int32_t snr);
 	void SetLossPacket (uint32_t lossPacket);
 	void SetTotalPacket (uint32_t totalPacket);
+	void SetPerRate (PerRate perRate);
 
 	int32_t GetRssi (void);
 	int32_t GetSnr (void);
 	uint32_t GetLossPacket (void);
 	uint32_t GetTotalPacket (void);
+	PerRate GetPerRate (void);
 
 private:
 	uint32_t m_rssi;
 	uint32_t m_snr;
 	uint32_t m_lossPacket;
 	uint32_t m_totalPacket;
-
+	PerRate m_perRate;
 };
 
 } // namespace ns3

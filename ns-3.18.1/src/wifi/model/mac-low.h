@@ -414,8 +414,7 @@ public:
 
 	// jychoi
 	void SetRxInfo(struct rxInfo info);
-	struct rxInfo GetRxInfo (
-			uint32_t fbtype, double percentile, double alpha, double beta ,
+	struct rxInfo GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta ,
 			double eta, double delta, double rho);
 	void SetAlpha (double alpha);
 	void SetEDR (double eta, double delta, double rho);
@@ -478,7 +477,7 @@ public:
    * This method is typically invoked by the lower PHY layer to notify
    * the MAC layer that a packet was unsuccessfully received.
    */
-  void ReceiveError (Ptr<const Packet> packet, double rxSnr, double rssi);
+  void ReceiveError (Ptr<const Packet> packet, double rxSnr, double rssi, WifiMode txMode);
   /**
    * \param duration switching delay duration.
    *
@@ -632,7 +631,9 @@ private:
 
   void SetupPhyMacLowListener (Ptr<WifiPhy> phy);
 
-  
+	//jychoi
+	void CalculatePerOfRate (void);
+	
 	Ptr<WifiPhy> m_phy;
   Ptr<WifiRemoteStationManager> m_stationManager;
   MacLowRxCallback m_rxCallback;
@@ -684,6 +685,13 @@ private:
 	rxRssiVector m_rxRssiVector;
 	rxRssiVector m_sortedRssiVector;
 	
+	typedef std::vector<double> rxPacket;
+	rxPacket m_totalPacket;
+	rxPacket m_lossPacket;
+	
+	typedef std::vector<uint8_t> PerOfRate;
+	PerOfRate m_perOfRate;
+	
 	//jychoi
 	void CalculateEwma (void);
 	void CalculateEDR (void);
@@ -693,6 +701,7 @@ private:
 	uint32_t m_rxRssiVectorSize;
 	double m_rxSnr;
 	double m_rxRssi;
+	
 	// type 1 EWMA
 	double m_ewmaSnr;
 	double m_ewmaRssi;

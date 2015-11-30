@@ -97,6 +97,7 @@ private:
   void ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr);
 	// jychoi
 	void SendFeedback (void);	
+	void SetMinPerOfMcs (void);
 	uint8_t GroupRateAdaptation (void);
 
 	Time duration;
@@ -104,6 +105,7 @@ private:
 	bool m_initialize;
 	bool m_firstnt;
 	bool m_setMacLowValue;
+	bool m_setRobust;
 	Mac48Address m_srcAddress;
 	uint32_t m_fbtype;
 	uint8_t m_addBasicModes;
@@ -124,6 +126,7 @@ private:
 	uint32_t m_tf_id;
 	Ptr<OnlineTableManager> m_tableManager;
 	std::vector<StaInfo> m_infos;
+	std::vector<double> m_minPerOfMcs;
 	
 	WifiMode m_GroupTxMode;
 

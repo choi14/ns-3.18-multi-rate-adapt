@@ -71,7 +71,7 @@ main (int argc, char *argv[])
 	uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 100; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
-	double bound = 10.0; 
+	double bound = 20.0; 
 	double endTime = 20;
 	double perThreshold = 0.001;
 	// feedbackType 0
@@ -111,6 +111,10 @@ main (int argc, char *argv[])
 	
 	SeedManager::SetRun(seed);
 
+	Config::SetDefault ("ns3::YansWifiPhy::CcaMode1Threshold", DoubleValue (-200));
+	Config::SetDefault ("ns3::YansWifiPhy::EnergyDetectionThreshold", DoubleValue (-200));
+	Config::SetDefault ("ns3::WifiMacQueue::MaxPacketNumber", UintegerValue (4000));
+	
 	/*NS_LOG_UNCOND
 		("seed: " << seed 
 		 << " rateAdaptType: " << rateAdaptType << " feedbackPeriod: " << feedbackPeriod <<	" doppler: " << dopplerVelocity << " bound: " << bound
@@ -239,23 +243,23 @@ main (int argc, char *argv[])
 	{
 		case 0:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
-					" feedbackType: " << feedbackType << " percentile: " << percentile << " bound: " << bound);
+					" feedbackType: " << feedbackType << " percentile: " << percentile << " bound: " << bound << " rxNodeNum: " << rxNodeNum);
 			out_filename << "storage_results/result_151125/per_" << percentile << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 1:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
-					" feedbackType: " << feedbackType << " alpha: " << alpha << " bound: " << bound);
+					" feedbackType: " << feedbackType << " alpha: " << alpha << " bound: " << bound << " rxNodeNum: " << rxNodeNum);
 			out_filename << "storage_results/result_151125/alp_" <<   alpha   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 2:
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
-					" feedbackType: " << feedbackType << " beta: " << beta << " bound: " << bound);
+					" feedbackType: " << feedbackType << " beta: " << beta << " bound: " << bound << " rxNodeNum: " << rxNodeNum);
 			out_filename << "storage_results/result_151125/bet_" <<   beta   << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 			break;
 		case 3: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
-					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound);
-			out_filename << "storage_results/result_edr_151125/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum);
+			out_filename << "storage_results/result_edr_test/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
 	}
 
 	fout.open(out_filename.str().c_str(), std::ostream::out);

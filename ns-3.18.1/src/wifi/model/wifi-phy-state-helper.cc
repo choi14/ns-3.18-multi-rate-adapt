@@ -372,19 +372,19 @@ WifiPhyStateHelper::SwitchFromRxEndOk (Ptr<Packet> packet, double snr, double rs
   DoSwitchFromRx ();
   if (!m_rxOkCallback.IsNull ())
     {
-      m_rxOkCallback (packet, snr, rssi,  mode, preamble);
+      m_rxOkCallback (packet, snr, rssi, mode, preamble);
     }
 
 }
 void
-WifiPhyStateHelper::SwitchFromRxEndError (Ptr<const Packet> packet, double snr, double rssi)
+WifiPhyStateHelper::SwitchFromRxEndError (Ptr<const Packet> packet, double snr, double rssi, WifiMode mode)
 {
   m_rxErrorTrace (packet, snr);
   NotifyRxEndError ();
   DoSwitchFromRx ();
   if (!m_rxErrorCallback.IsNull ())
     {
-      m_rxErrorCallback (packet, snr, rssi);
+      m_rxErrorCallback (packet, snr, rssi, mode);
     }
 }
 
