@@ -325,7 +325,12 @@ OnlineTableManager::PrintOnlineTable(std::ostream &os){
 
 double
 OnlineTableManager::GetPdr (uint8_t mcs, uint32_t rssi){
-	return m_table[mcs][rssi].p;
+	if (rssi < rssi_min)
+			return 0;
+	else if (rssi > rssi_min + 50)
+			return threshold_high;
+	else
+			return m_table[mcs][rssi].p;
 }
 
 void

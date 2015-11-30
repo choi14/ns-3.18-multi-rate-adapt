@@ -774,7 +774,8 @@ MacLow::GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta
 			break;
 		} // case 2
 		
-		case 3: // RAM using eta, delta, rho 
+		case 3:
+		case 4: // RAM using eta, delta, rho 
 		{
 			CalculatePerOfRate ();
 			NS_LOG_INFO ("feedbackType: " << fbtype << " eta: " << eta << " delta: " << delta << " rho: " << rho);
