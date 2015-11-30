@@ -104,6 +104,7 @@ private:
 	bool m_initialize;
 	bool m_firstnt;
 	bool m_setMacLowValue;
+	bool m_setRobust;
 	Mac48Address m_srcAddress;
 	uint32_t m_fbtype;
 	uint8_t m_addBasicModes;

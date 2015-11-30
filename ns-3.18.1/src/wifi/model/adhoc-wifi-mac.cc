@@ -118,6 +118,7 @@ AdhocWifiMac::AdhocWifiMac ()
 	NS_LOG_FUNCTION (this);
 	m_initialize = false;
 	m_setMacLowValue = false;
+	m_setRobust = false;
 	m_feedbackPeriod = 100;
 	m_addBasicModes = 0;
 	m_minSnr = 0.0;
@@ -322,10 +323,17 @@ AdhocWifiMac::Receive (Ptr<Packet> packet, const WifiMacHeader *hdr)
 		  m_rxInfoSet.Snr = fbhdr.GetSnr();
 		  m_rxInfoSet.LossPacket = fbhdr.GetLossPacket();
 		  m_rxInfoSet.TotalPacket = fbhdr.GetTotalPacket();
+		  m_rxInfoSet.perRate = fbhdr.GetPerRate();
 
-		  NS_LOG_INFO ("[rx feedback packet]" << " Address: " << to << " RSSI: " << m_rxInfoSet.Rssi
+			NS_LOG_INFO ("[rx feedback packet]" << " Address: " << to << " RSSI: " << m_rxInfoSet.Rssi
 					<< " Snr: " << m_rxInfoSet.Snr << " LossPacket: " 
 					<< m_rxInfoSet.LossPacket << " TotalPacket: " << m_rxInfoSet.TotalPacket);
+
+			NS_LOG_INFO ("[rx feedback packet]" 
+					<< " perMCS0: " << (int)m_rxInfoSet.perRate.perMCS0 << " perMCS1: " << (int)m_rxInfoSet.perRate.perMCS1 
+					<< " perMCS2: " << (int)m_rxInfoSet.perRate.perMCS2 << " perMCS3: " << (int)m_rxInfoSet.perRate.perMCS3 
+					<< " perMCS4: " << (int)m_rxInfoSet.perRate.perMCS4	<< " perMCS5: " << (int)m_rxInfoSet.perRate.perMCS5 
+					<< " perMCS6: " << (int)m_rxInfoSet.perRate.perMCS6	<< " perMCS7: " << (int)m_rxInfoSet.perRate.perMCS7);
 			
 			// GroupRate
 		  UpdateInfo(from, m_rxInfoSet);
@@ -396,11 +404,20 @@ AdhocWifiMac::SendFeedback ()
   FeedbackHdr.SetSnr (m_rxInfoGet.Snr);
   FeedbackHdr.SetLossPacket (m_rxInfoGet.LossPacket);
   FeedbackHdr.SetTotalPacket (m_rxInfoGet.TotalPacket);
+  FeedbackHdr.SetPerRate (m_rxInfoGet.perRate);
 	packet->AddHeader (FeedbackHdr);
 
-	NS_LOG_INFO ("[tx feedback packet]" << " Address " << m_low->GetAddress () << " RSSI: " << m_rxInfoGet.Rssi << " Snr: " << m_rxInfoGet.Snr <<
-			" LossPacket: " << m_rxInfoGet.LossPacket << " TotalPacket: " << m_rxInfoGet.TotalPacket);
-  m_dca->Queue (packet, hdr);
+	NS_LOG_INFO ("[tx feedback packet]" << " Address " << m_low->GetAddress () 
+			<< " RSSI: " << m_rxInfoGet.Rssi << " Snr: " << m_rxInfoGet.Snr 
+			<<" LossPacket: " << m_rxInfoGet.LossPacket << " TotalPacket: " << m_rxInfoGet.TotalPacket);
+
+	NS_LOG_INFO ("[tx feedback packet]" 
+			<< " perMCS0: " << (int)m_rxInfoGet.perRate.perMCS0 << " perMCS1: " << (int)m_rxInfoGet.perRate.perMCS1 
+			<< " perMCS2: " << (int)m_rxInfoGet.perRate.perMCS2 << " perMCS3: " << (int)m_rxInfoGet.perRate.perMCS3 
+			<< " perMCS4: " << (int)m_rxInfoGet.perRate.perMCS4 << " perMCS5: " << (int)m_rxInfoGet.perRate.perMCS5 
+			<< " perMCS6: " << (int)m_rxInfoGet.perRate.perMCS6 << " perMCS7: " << (int)m_rxInfoGet.perRate.perMCS7);
+ 
+	m_dca->Queue (packet, hdr);
   Simulator::Schedule (MilliSeconds(m_feedbackPeriod), &AdhocWifiMac::SendFeedback, this);
 }
 
@@ -414,199 +431,211 @@ AdhocWifiMac::GroupRateAdaptation ()
 		SetBasicModes ();
 		m_addBasicModes = 1;
 	}
-
-	uint32_t vsize = m_infos.size();
-	NS_LOG_INFO("vsize: " << vsize);
-
-	if(vsize == 0)
+	
+	if(m_setRobust == true)
+	{
 		m_GroupTxMcs = 0;
-
+		m_burstsize = 20;
+	}
 	else
 	{
-		for (uint32_t m = 0; m < vsize; m++)
+		uint32_t vsize = m_infos.size();
+		NS_LOG_INFO("vsize: " << vsize);
+
+		if(vsize == 0)
 		{
-			if((double)m_infos[m].info.Snr > 3.0)
-			{
-				m_minSnr = (double)m_infos[m].info.Snr;
-				break;
-			}
-		}
-
-		for (uint32_t m = 0; m < vsize; m++)
+			m_GroupTxMcs = 0;
+		} // vsize == 0
+		
+		else
 		{
-			if( (m_minSnr > (double)m_infos[m].info.Snr) && ((double)m_infos[m].info.Snr > 3.0) )
+			for (uint32_t m = 0; m < vsize; m++)
 			{
-				m_minSnr = (double)m_infos[m].info.Snr;
-			}
-		}
-
-		NS_LOG_INFO("m_minSnr(dB): " << m_minSnr <<
-				" m_minSnr(ratio): " << std::pow(10.0, m_minSnr/10.0)); 
-
-		if(m_minSnr > 3.0)
-		{
-			m_firstnt = true;
-			m_minSnrLinear = std::pow (10.0, m_minSnr/10.0); // m_minSnrLinear: log->linear
-			uint32_t NBasicMode = m_stationManager->GetNBasicModes ();
-			double Per = 1.0;
-			double Pdr = 0.0;			
-			double maxPdrRate = 0.0;
-			double PdrRate = 0.0;
-			double Rate = 0.0;
-
-			for (uint32_t k = 0; k < NBasicMode; k++)
-			{
-				WifiMode mode = m_stationManager->GetBasicMode(k);
-
-				double coderate = 1.0;
-				if(mode.GetCodeRate () == WIFI_CODE_RATE_3_4)
-					coderate = 3.0/4.0;
-				else if(mode.GetCodeRate () == WIFI_CODE_RATE_2_3)
-					coderate = 2.0/3.0;
-				else if(mode.GetCodeRate () == WIFI_CODE_RATE_1_2)
-					coderate = 1.0/2.0;
-				else if(mode.GetCodeRate () == WIFI_CODE_RATE_5_6)
-					coderate = 5.0/6.0;
-
-				uint32_t ofdmbits = 48; // Coded bits per OFDM symbols
-				if(mode.GetPhyRate () == 12000000)
-					ofdmbits = 48;
-				else if(mode.GetPhyRate () == 24000000)
-					ofdmbits = 96;
-				else if(mode.GetPhyRate () == 48000000)
-					ofdmbits = 192;
-				else if(mode.GetPhyRate () == 72000000)
-					ofdmbits = 288;
-
-				uint32_t databits = 1000;
-				double nSymbols = ((databits+80)*8+22)/coderate/ofdmbits;
-				uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
-
-				// N*Duration Rate Adaptation 
-				if(m_ratype == 0)
+				if((double)m_infos[m].info.Snr > 3.0)
 				{
-					uint8_t temp_n = 0;
-					WifiPreamble preamble = WIFI_PREAMBLE_LONG;
-					WifiTxVector v;
-					v.SetMode (mode);
-					v.SetTxPowerLevel (0);
-					v.SetShortGuardInterval (false);
-					v.SetNss (1);
-					v.SetNess (0);
-					v.SetStbc (false);
+					m_minSnr = (double)m_infos[m].info.Snr;
+					break;
+				}
+			} // find first m_minSnr over 3 dB
 
-					Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
-					uint8_t tempBurstsize = KtoNTable[m_k-1][(int)(Pdr*100)];
-					if((tempBurstsize < 13) && (tempBurstsize > 0))
+			for (uint32_t m = 0; m < vsize; m++)
+			{
+				if( (m_minSnr > (double)m_infos[m].info.Snr) && ((double)m_infos[m].info.Snr > 3.0) )
+				{
+					m_minSnr = (double)m_infos[m].info.Snr;
+				}
+			} // find m_minSnr over 3 dB
+
+			NS_LOG_INFO("m_minSnr(dB): " << m_minSnr <<
+					" m_minSnr(ratio): " << std::pow(10.0, m_minSnr/10.0)); 
+
+			if(m_minSnr > 3.0)
+			{
+				m_firstnt = true;
+				m_minSnrLinear = std::pow (10.0, m_minSnr/10.0); // m_minSnrLinear: log->linear
+				uint32_t NBasicMode = m_stationManager->GetNBasicModes ();
+				double Per = 1.0;
+				double Pdr = 0.0;			
+				double maxPdrRate = 0.0;
+				double PdrRate = 0.0;
+				double Rate = 0.0;
+
+				for (uint32_t k = 0; k < NBasicMode; k++)
+				{
+					WifiMode mode = m_stationManager->GetBasicMode(k);
+
+					double coderate = 1.0;
+					if(mode.GetCodeRate () == WIFI_CODE_RATE_3_4)
+						coderate = 3.0/4.0;
+					else if(mode.GetCodeRate () == WIFI_CODE_RATE_2_3)
+						coderate = 2.0/3.0;
+					else if(mode.GetCodeRate () == WIFI_CODE_RATE_1_2)
+						coderate = 1.0/2.0;
+					else if(mode.GetCodeRate () == WIFI_CODE_RATE_5_6)
+						coderate = 5.0/6.0;
+
+					uint32_t ofdmbits = 48; // Coded bits per OFDM symbols
+					if(mode.GetPhyRate () == 12000000)
+						ofdmbits = 48;
+					else if(mode.GetPhyRate () == 24000000)
+						ofdmbits = 96;
+					else if(mode.GetPhyRate () == 48000000)
+						ofdmbits = 192;
+					else if(mode.GetPhyRate () == 72000000)
+						ofdmbits = 288;
+
+					uint32_t databits = 1000;
+					double nSymbols = ((databits+80)*8+22)/coderate/ofdmbits;
+					uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
+
+					// N*Duration Rate Adaptation 
+					if(m_ratype == 0)
 					{
-						tempBurstsize = 13;
-					}
-					NS_LOG_INFO("m_k: " << (uint16_t)m_k << " Pdr: " << (int)(Pdr*100) << " Pdr: " << Pdr);
-					duration = m_phy->CalculateTxDuration(databits+80, v, preamble); 
-					double nt = tempBurstsize * duration.GetMicroSeconds ();
-					NS_LOG_INFO("Duration: " << duration << " m_burstsize: " << (uint32_t)m_burstsize << " nt: " << nt);
-					
-					if(m_firstnt == true)
-					{
-						m_GroupTxMode = mode;
-						m_burstsize= temp_n;
-						m_minNT = nt;
-						m_burstsize = tempBurstsize;
-						m_firstnt = false;
-					}
-					else
-					{
-						if ((nt < m_minNT) && (nt != 0))
+						WifiPreamble preamble = WIFI_PREAMBLE_LONG;
+						WifiTxVector v;
+						v.SetMode (mode);
+						v.SetTxPowerLevel (0);
+						v.SetShortGuardInterval (false);
+						v.SetNss (1);
+						v.SetNess (0);
+						v.SetStbc (false);
+
+						Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
+						uint8_t tempBurstsize = KtoNTable[m_k-1][(uint8_t)(Pdr*100)];
+						
+						if((tempBurstsize < 13) && (tempBurstsize > 0))
+						{
+							tempBurstsize = 13;
+						}
+						NS_LOG_INFO("m_k: " << (uint16_t)m_k << " Pdr: " << (uint8_t)(Pdr*100) << " Pdr: " << Pdr);
+						duration = m_phy->CalculateTxDuration(databits+80, v, preamble); 
+						double nt = tempBurstsize * duration.GetMicroSeconds ();
+						NS_LOG_INFO("Duration: " << duration << " m_burstsize: " << (uint32_t)m_burstsize << " nt: " << nt);
+
+						if(m_firstnt == true)
 						{
 							m_GroupTxMode = mode;
 							m_minNT = nt;
 							m_burstsize = tempBurstsize;
+							m_firstnt = false;
 						}
-					}
-				}//m_ratype == 0
-				
-				// PER-SNR Rate Adaptation
-				else if(m_ratype == 1)
+						else // m_firstnt = false
+						{
+							if ((nt < m_minNT) && (nt != 0))
+							{
+								m_GroupTxMode = mode;
+								m_minNT = nt;
+								m_burstsize = tempBurstsize;
+							}
+						}
+					}//m_ratype == 0
+
+					// PER-SNR Rate Adaptation
+					else if(m_ratype == 1)
+					{
+						Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
+						double tempPer = 1-Pdr;
+						NS_LOG_INFO("mode: " << mode.GetDataRate ()*0.000001 << " tempPer: " << tempPer);
+						if(tempPer < m_per)
+						{
+							m_GroupTxMode = mode;
+							Per = tempPer;
+						}
+
+						if (Per == 1)
+							m_GroupTxMode = m_stationManager->GetBasicMode (0);
+						else if (Per > 1)
+							NS_LOG_ERROR("Never happen");
+						
+						m_burstsize = KtoNTable[m_k-1][(uint8_t)(100-Per*100)];
+					}//m_ratype == 1
+
+					// Throughput-SNR Rate Adaptation
+					else if (m_ratype == 2)
+					{
+						Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
+						Rate = mode.GetDataRate();
+						PdrRate = Pdr*Rate*0.000001;
+
+						if (PdrRate > maxPdrRate)
+						{
+							m_GroupTxMode = mode;
+							maxPdrRate = PdrRate;
+							Per = 1-Pdr;
+						}
+						if (maxPdrRate == 0)
+						{
+							m_GroupTxMode = m_stationManager->GetBasicMode (0);
+							Per = 1;
+						}
+						else if (maxPdrRate < 0)
+							NS_LOG_ERROR("Never happen");
+						
+						m_burstsize = KtoNTable[m_k-1][(uint32_t)(100-Per*100)];
+					}//m_ratype==2
+
+				} // for - NBasicMod
+
+				int tmpGroupTxMode = m_GroupTxMode.GetDataRate()*0.000001;
+				switch (tmpGroupTxMode)
 				{
-					Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
-					double tempPer = 1-Pdr;
-					NS_LOG_INFO("mode: " << mode.GetDataRate ()*0.000001 << " tempPer: " << tempPer);
-					if(tempPer < m_per)
-					{
-						m_GroupTxMode = mode;
-						Per = tempPer;
-					}
+					case 6:
+						m_GroupTxMcs = 0;	break;
+					case 9:
+						m_GroupTxMcs = 1;	break;
+					case 12:
+						m_GroupTxMcs = 2;	break;
+					case 18:
+						m_GroupTxMcs = 3;	break;
+					case 24:
+						m_GroupTxMcs = 4;	break;
+					case 36:
+						m_GroupTxMcs = 5;	break;
+					case 48:
+						m_GroupTxMcs = 6; break;
+					case 54:
+						m_GroupTxMcs = 7;	break;
+				}
 
-					if (Per == 1)
-						m_GroupTxMcs = 0;
-					else if (Per > 1)
-						NS_LOG_ERROR("Never happen");
-					m_burstsize = KtoNTable[m_k-1][(uint32_t)(1-Per)*100];
-				}//m_ratype == 1
-
-				// Throughput-SNR Rate Adaptation
-				else if (m_ratype == 2)
+				if(m_minNT == 0)
 				{
-					Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
-					Rate = mode.GetDataRate();
-					PdrRate = Pdr*Rate*0.000001;
+					m_GroupTxMcs = 0;
+					m_burstsize = 20;
+				}
 
-					if (PdrRate > maxPdrRate)
-					{
-						m_GroupTxMode = mode;
-						maxPdrRate = PdrRate;
-						Per = 1-Pdr;
-					}
-					if (maxPdrRate == 0)
-					{
-						m_GroupTxMcs = 0;
-						Per = 1;
-					}
-					else if (maxPdrRate < 0)
-						NS_LOG_ERROR("Never happen");
-					m_burstsize = KtoNTable[m_k-1][(uint32_t)(1-Per)*100];
-				}//m_ratype==2
-
-			} // for - NBasicMod
-		
-			int tmpGroupTxMode = m_GroupTxMode.GetDataRate()*0.000001;
-			switch (tmpGroupTxMode)
+				NS_LOG_INFO ("m_minSnr: " << m_minSnr
+						<< " GroupTxDataRate: " <<  m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s"
+						<< " GroupTxMcs: " << m_GroupTxMcs);
+			} // if m_minSnr > 3
+			else
 			{
-				case 6:
-					m_GroupTxMcs = 0;	break;
-				case 9:
-					m_GroupTxMcs = 1;	break;
-				case 12:
-					m_GroupTxMcs = 2;	break;
-				case 18:
-					m_GroupTxMcs = 3;	break;
-				case 24:
-					m_GroupTxMcs = 4;	break;
-				case 36:
-					m_GroupTxMcs = 5;	break;
-				case 48:
-					m_GroupTxMcs = 6; break;
-				case 54:
-					m_GroupTxMcs = 7;	break;
-			}
-
-			if(m_minNT == 0)
-			{
+				NS_LOG_INFO("m_minSnr: " << m_minSnr << " < 3 dB and Mcs: 0 burstsize: 20");
 				m_GroupTxMcs = 0;
-				m_minNT = 30;
-			}
-
-			NS_LOG_INFO ("m_minSnr: " << m_minSnr
-					<< " GroupTxDataRate: " <<  m_GroupTxMode.GetDataRate ()*0.000001<<" Mb/s"
-					<< " GroupTxMcs: " << m_GroupTxMcs);
-		} // if m_minSnr > 1
-		else
-		{
-			NS_LOG_INFO("m_minSnr: " << m_minSnr << " < 1 and selectBasicMode");
-			m_GroupTxMcs = 0;
-			m_minNT = 30;
-		}
-	} // vsize != 0
+				m_burstsize = 30; // because m_minSnr is under 3 dB
+			} // m_minSnr < 3
+		} // vsize != 0
+	}// m_setRobust == false
+	
 	return m_GroupTxMcs;
 }
 
@@ -688,6 +717,8 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 		packet->PeekHeader(coeffi);
 
 		uint16_t eid = coeffi.GetEid();
+		uint16_t seq = coeffi.GetSeq();
+		NS_LOG_ERROR("Eid: " << eid << "Seq: " << seq);
 
 		if (eid <= m_last_eid)
 				return;
@@ -761,7 +792,7 @@ AdhocWifiMac::SetBasicModes(void)
 	m_stationManager->AddBasicMode(WifiMode("OfdmRate48Mbps"));// 10
 	m_stationManager->AddBasicMode(WifiMode("OfdmRate54Mbps"));// 11
 
-	NS_LOG_UNCOND ("Number of Basic Modes: " << m_stationManager->GetNBasicModes());
+  //NS_LOG_UNCOND ("Number of Basic Modes: " << m_stationManager->GetNBasicModes());
 	
 	m_tableManager->SetRemoteStation(m_stationManager);
 	m_tableManager->SetPhy(m_phy);
