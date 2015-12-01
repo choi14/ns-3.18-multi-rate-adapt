@@ -75,7 +75,7 @@ main (int argc, char *argv[])
 	uint32_t rxNodeNum = 1;
 	uint32_t seed = 1; // 1:1:100 
 	uint32_t rateAdaptType = 0; // 0, 1, 2 (0 = n*t) 
-	uint32_t feedbackType = 3; // 0, 1, 2, 3
+	uint32_t feedbackType = 3; // 0, 1, 2, 3, 4
 	uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 100; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
@@ -275,16 +275,20 @@ main (int argc, char *argv[])
 		case 3: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum);
-			out_filename << "storage_results/result_edr_151201/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			out_filename << "storage_results/result_edr3_151201/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			break;
 		case 4: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum);
 			out_filename << "storage_results/result_edr_151201/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+			break;
+		default:
+			NS_LOG_UNCOND("Invalid type");
 	}
 
 	fout.open(out_filename.str().c_str(), std::ostream::out);
 	if(!fout.good())
-		NS_LOG_UNCOND("File open failed");
+		NS_LOG_UNCOND("File open failed " << out_filename.str());
 	
 	//fout << "multicastrateadapt_seed" << seed << "_rateAdaptType" << rateAdaptType << "_feedbackPeriod" << feedbackPeriod <<  "_doppler" << dopplerVelocity << "_bound" << bound << 
 	//	" feedbackType: " << feedbackType << " percentile: " << percentile << " alpha: " << alpha << " beta: " << beta << std::endl;

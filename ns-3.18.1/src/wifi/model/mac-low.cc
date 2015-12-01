@@ -849,7 +849,7 @@ MacLow::MacLowCalculatePdr(uint32_t k, double currentSnr)
 	m_snrLinear = std::pow (10.0, m_rxInfo.Snr/10.0); // m_minSnrLinear: log->linear
 	double Pdr = m_phy->CalculatePdr (mode, m_snrLinear, nbits);
 
-	return Pdr*1000;
+	return 1000-Pdr*1000;
 }
 
 
