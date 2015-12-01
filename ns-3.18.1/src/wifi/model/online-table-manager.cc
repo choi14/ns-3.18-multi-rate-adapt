@@ -195,10 +195,10 @@ OnlineTableManager::UpdateTable (uint16_t seq, uint16_t id, uint8_t mcs, uint32_
 
 void
 OnlineTableManager::SamplingTimeout (void){
-	double pdr = (double)m_rcv / (double)m_tot;
-	uint32_t rssi_avg = m_rssi_cur / m_rcv;
+	//double pdr = (double)m_rcv / (double)m_tot;
+	//uint32_t rssi_avg = m_rssi_cur / m_rcv;
 	
-	NS_LOG_LOGIC("Sampling Timeout Pdr: " << pdr << " Rssi: " << rssi_avg  << " rcv: " << m_rcv << " tot: " << m_tot << " mcs: " << (uint32_t)m_mcs_cur); 
+	//NS_LOG_LOGIC("Sampling Timeout Pdr: " << pdr << " Rssi: " << rssi_avg  << " rcv: " << m_rcv << " tot: " << m_tot << " mcs: " << (uint32_t)m_mcs_cur); 
 	
 	if (m_tot > m_min_num_samples)
 		RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_tot);
@@ -325,7 +325,12 @@ OnlineTableManager::PrintOnlineTable(std::ostream &os){
 
 double
 OnlineTableManager::GetPdr (uint8_t mcs, uint32_t rssi){
-	return m_table[mcs][rssi].p;
+	if (rssi < rssi_min)
+			return 0;
+	else if (rssi > rssi_min + 50)
+			return threshold_high;
+	else
+			return m_table[mcs][rssi].p;
 }
 
 void

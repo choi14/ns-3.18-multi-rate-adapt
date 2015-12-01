@@ -404,7 +404,7 @@ AdhocWifiMac::SendFeedback ()
 {
   NS_LOG_FUNCTION (this);
   
-	WifiMacHeader hdr;
+  WifiMacHeader hdr;
   hdr.SetFeedback ();
   hdr.SetAddr1 (m_srcAddress);
   hdr.SetAddr2 (m_low->GetAddress ());
@@ -415,23 +415,48 @@ AdhocWifiMac::SendFeedback ()
 	m_rxInfoGet = m_low->GetRxInfo (m_fbtype, m_percentile, m_alpha, m_beta, m_eta, m_delta, m_rho);
   Ptr<Packet> packet = Create<Packet> ();
   FeedbackHeader FeedbackHdr; // Set RSSI, SNR, txPacket, TotalPacket
-	FeedbackHdr.SetRssi (m_rxInfoGet.Rssi);
+  FeedbackHdr.SetRssi (m_rxInfoGet.Rssi);
   FeedbackHdr.SetSnr (m_rxInfoGet.Snr);
   FeedbackHdr.SetLossPacket (m_rxInfoGet.LossPacket);
   FeedbackHdr.SetTotalPacket (m_rxInfoGet.TotalPacket);
-  FeedbackHdr.SetPerRate (m_rxInfoGet.perRate);
+
+
+  if (m_fbtype != 4){
+  	FeedbackHdr.SetPerRate (m_rxInfoGet.perRate);
+  }
+  else{
+	PerRate per_rate;
+	int32_t snr = m_rxInfoGet.Snr > 0 ? m_rxInfoGet.Snr : 0;
+
+	per_rate.perMCS0 = 1000-(uint16_t)(1000*m_tableManager->GetPdr(0, (uint32_t)snr));
+	per_rate.perMCS1 = 1000-(uint16_t)(1000*m_tableManager->GetPdr(1, (uint32_t)snr));
+	per_rate.perMCS2 = 1000-(uint16_t)(1000*m_tableManager->GetPdr(2, (uint32_t)snr));
+	per_rate.perMCS3 = 1000-(uint16_t)(1000*m_tableManager->GetPdr(3, (uint32_t)snr));
+	per_rate.perMCS4 = 1000-(uint16_t)(1000*m_tableManager->GetPdr(4, (uint32_t)snr));
+	per_rate.perMCS5 = 1000-(uint16_t)(1000*m_tableManager->GetPdr(5, (uint32_t)snr));
+	per_rate.perMCS6 = 1000-(uint16_t)(1000*m_tableManager->GetPdr(6, (uint32_t)snr));
+	per_rate.perMCS7 = 1000-(uint16_t)(1000*m_tableManager->GetPdr(7, (uint32_t)snr));
+	FeedbackHdr.SetPerRate(per_rate);
+  }
 	packet->AddHeader (FeedbackHdr);
+
+
 
 	NS_LOG_INFO ("[tx feedback packet]" << " Address " << m_low->GetAddress () 
 			<< " RSSI: " << m_rxInfoGet.Rssi << " Snr: " << m_rxInfoGet.Snr 
 			<<" LossPacket: " << m_rxInfoGet.LossPacket << " TotalPacket: " << m_rxInfoGet.TotalPacket);
-
+/*
 	NS_LOG_INFO ("[tx feedback packet]" 
 			<< " perMCS0: " << (int)m_rxInfoGet.perRate.perMCS0 << " perMCS1: " << m_rxInfoGet.perRate.perMCS1 
 			<< " perMCS2: " << (int)m_rxInfoGet.perRate.perMCS2 << " perMCS3: " << (int)m_rxInfoGet.perRate.perMCS3 
 			<< " perMCS4: " << (int)m_rxInfoGet.perRate.perMCS4 << " perMCS5: " << (int)m_rxInfoGet.perRate.perMCS5 
 			<< " perMCS6: " << (int)m_rxInfoGet.perRate.perMCS6 << " perMCS7: " << (int)m_rxInfoGet.perRate.perMCS7);
- 
+ */
+	NS_LOG_INFO ("[tx feedback packet]" 
+			<< " perMCS0: " << (int)FeedbackHdr.GetPerRate().perMCS0 << " perMCS1: " << (int)FeedbackHdr.GetPerRate().perMCS1 
+			<< " perMCS2: " << (int)FeedbackHdr.GetPerRate().perMCS2 << " perMCS3: " << (int)FeedbackHdr.GetPerRate().perMCS3 
+			<< " perMCS4: " << (int)FeedbackHdr.GetPerRate().perMCS4 << " perMCS5: " << (int)FeedbackHdr.GetPerRate().perMCS5 
+			<< " perMCS6: " << (int)FeedbackHdr.GetPerRate().perMCS6 << " perMCS7: " << (int)FeedbackHdr.GetPerRate().perMCS7);
 	m_dca->Queue (packet, hdr);
   Simulator::Schedule (MilliSeconds(m_feedbackPeriod), &AdhocWifiMac::SendFeedback, this);
 }
@@ -440,51 +465,51 @@ void
 AdhocWifiMac::SetMinPerOfMcs (void)
 {
 	uint32_t vsize = m_infos.size();
+	m_minPerOfMcs[0] = m_infos[0].info.perRate.perMCS0;
+	m_minPerOfMcs[1] = m_infos[0].info.perRate.perMCS1;
+	m_minPerOfMcs[2] = m_infos[0].info.perRate.perMCS2;
+	m_minPerOfMcs[3] = m_infos[0].info.perRate.perMCS3;
+	m_minPerOfMcs[4] = m_infos[0].info.perRate.perMCS4;
+	m_minPerOfMcs[5] = m_infos[0].info.perRate.perMCS5;
+	m_minPerOfMcs[6] = m_infos[0].info.perRate.perMCS6;
+	m_minPerOfMcs[7] = m_infos[0].info.perRate.perMCS7;
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
-		m_minPerOfMcs[0] = m_infos[i].info.perRate.perMCS0;
 		if(m_infos[i].info.perRate.perMCS0 > m_minPerOfMcs[0])
 			m_minPerOfMcs[0] = m_infos[i].info.perRate.perMCS0;
 	}
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
-		m_minPerOfMcs[1] = m_infos[i].info.perRate.perMCS1;
 		if(m_infos[i].info.perRate.perMCS1 > m_minPerOfMcs[1])
 			m_minPerOfMcs[1] = m_infos[i].info.perRate.perMCS1;
 	}
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
-		m_minPerOfMcs[2] = m_infos[i].info.perRate.perMCS2;
 		if(m_infos[i].info.perRate.perMCS2 > m_minPerOfMcs[2])
 			m_minPerOfMcs[2] = m_infos[i].info.perRate.perMCS2;
 	}
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
-		m_minPerOfMcs[3] = m_infos[i].info.perRate.perMCS3;
 		if(m_infos[i].info.perRate.perMCS3 > m_minPerOfMcs[3])
 			m_minPerOfMcs[3] = m_infos[i].info.perRate.perMCS3;
 	}
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
-		m_minPerOfMcs[4] = m_infos[i].info.perRate.perMCS4;
 		if(m_infos[i].info.perRate.perMCS4 > m_minPerOfMcs[4])
 			m_minPerOfMcs[4] = m_infos[i].info.perRate.perMCS4;
 	}
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
-		m_minPerOfMcs[5] = m_infos[i].info.perRate.perMCS5;
 		if(m_infos[i].info.perRate.perMCS5 > m_minPerOfMcs[5])
 			m_minPerOfMcs[5] = m_infos[i].info.perRate.perMCS5;
 	}
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
-		m_minPerOfMcs[6] = m_infos[i].info.perRate.perMCS6;
 		if(m_infos[i].info.perRate.perMCS6 > m_minPerOfMcs[6])
 			m_minPerOfMcs[6] = m_infos[i].info.perRate.perMCS6;
 	}
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
-		m_minPerOfMcs[7] = m_infos[i].info.perRate.perMCS7;
 		if(m_infos[i].info.perRate.perMCS7 > m_minPerOfMcs[7])
 			m_minPerOfMcs[7] = m_infos[i].info.perRate.perMCS7;
 	}
@@ -592,15 +617,15 @@ AdhocWifiMac::GroupRateAdaptation (void)
 						v.SetNess (0);
 						v.SetStbc (false);
 
-						Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
-						//Pdr = 1-(double)(m_minPerOfMcs[k]/1000);
+						//Pdr = m_phy->CalculatePdr (mode, m_minSnrLinear, nbits);
+						Pdr = 1-(double)(m_minPerOfMcs[k]/1000);
 						uint8_t tempBurstsize = KtoNTable[m_k-1][(uint8_t)(Pdr*100)];
 						
 						if((tempBurstsize < 13) && (tempBurstsize > 0))
 						{
 							tempBurstsize = 13;
 						}
-						NS_LOG_INFO("m_k: " << (uint16_t)m_k << " Pdr: " << (uint8_t)(Pdr*100) << " Pdr: " << Pdr);
+						NS_LOG_INFO("m_k: " << (uint16_t)m_k << " Pdr: " << (uint16_t)(Pdr*100) << " Pdr: " << Pdr);
 						duration = m_phy->CalculateTxDuration(databits+80, v, preamble); 
 						double nt = tempBurstsize * duration.GetMicroSeconds ();
 						NS_LOG_INFO("Duration: " << duration << " m_burstsize: " << (uint32_t)m_burstsize << " nt: " << nt);
@@ -771,7 +796,7 @@ AdhocWifiMac::ReceiveTl (Ptr<Packet> packet, Mac48Address from)
 					double snr =  m_low->GetRxSnr();
 					uint32_t snr_db =(uint32_t)(10*std::log10(snr));
 
-					NS_LOG_INFO("Rate: " << rate << " Id: " << id << " Seq: " << seq << " Snr: " << snr_db);
+					//NS_LOG_INFO("Rate: " << rate << " Id: " << id << " Seq: " << seq << " Snr: " << snr_db);
 					m_tableManager->InitialTable(seq, id, rate, snr_db); 	
 			
 					break;
@@ -793,6 +818,7 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 
 		uint16_t eid = coeffi.GetEid();
 		uint16_t seq = coeffi.GetSeq();
+		uint16_t nc_nn = coeffi.GetN();
 		uint8_t rate = m_low->GetRxMcs();
 		double snr = m_low->GetRxSnr();
 		uint32_t snr_db =(uint32_t)(10*std::log10(snr));
@@ -810,7 +836,8 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 			m_tableManager->SetN((uint16_t)n);
 			start_nc = true;
 		}
-
+		
+		m_tableManager->SetN(nc_nn);
 		m_tableManager->UpdateTable(seq, eid, rate, snr_db);	
 		NS_LOG_ERROR("Eid: " << eid << "Seq: " << seq);
 
