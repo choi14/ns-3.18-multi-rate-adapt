@@ -92,6 +92,8 @@ main (int argc, char *argv[])
 	double eta = 1.0;
 	double delta = 0.1;
 	double rho = 0.1;
+	//EDR type
+	uint32_t edrType = 0;
 
   double getTotalTx = 0.0;
 	double sumTotalRx = 0.0;
@@ -115,6 +117,7 @@ main (int argc, char *argv[])
 	cmd.AddValue ("Eta", "Weighting factor of SNR", eta);
 	cmd.AddValue ("Delta", "Weighting factor of SNR and deviation", delta);
 	cmd.AddValue ("Rho", "weighting factor of deviation", rho);
+	cmd.AddValue ("EDRtype", "Type of EDR Calculation", edrType);
 	cmd.Parse (argc, argv);
 	
 	SeedManager::SetRun(seed);
@@ -145,7 +148,7 @@ main (int argc, char *argv[])
 	double dopplerFrq = dopplerVelocity*50/3; 
 	wifiChannel.AddPropagationLoss("ns3::JakesPropagationLossModel");
 	Config::SetDefault ("ns3::JakesProcess::DopplerFrequencyHz", DoubleValue (dopplerFrq));
-	// Adhoc-wifi-mac
+	// Adhoc-wifi-mac.cc
 	Config::SetDefault ("ns3::AdhocWifiMac::RateAdaptType", UintegerValue (rateAdaptType));
 	Config::SetDefault ("ns3::AdhocWifiMac::PerThreshold", DoubleValue (perThreshold));
 	Config::SetDefault ("ns3::AdhocWifiMac::FeedbackType", UintegerValue (feedbackType));
@@ -156,6 +159,8 @@ main (int argc, char *argv[])
 	Config::SetDefault ("ns3::AdhocWifiMac::Eta", DoubleValue (eta));
 	Config::SetDefault ("ns3::AdhocWifiMac::Delta", DoubleValue (delta));
 	Config::SetDefault ("ns3::AdhocWifiMac::Rho", DoubleValue (rho));
+	// Mac-low.cc
+	Config::SetDefault ("ns3::MacLow::EDRtype", UintegerValue (edrType));
 	
 	wifiPhy.SetChannel (wifiChannel.Create ());
 	NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default(); 
@@ -274,13 +279,13 @@ main (int argc, char *argv[])
 			break;
 		case 3: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
-					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum);
-			out_filename << "storage_results/result_edr3_151201/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum << " edrType: " << edrType);
+			out_filename << "storage_results/result_edr3_151204/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << ".txt";
 			break;
 		case 4: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
-					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum);
-			out_filename << "storage_results/result_edr_151201/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << ".txt";
+					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum << " edrType: " << edrType);
+			out_filename << "storage_results/result_edr4_151203/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << ".txt";
 			break;
 		default:
 			NS_LOG_UNCOND("Invalid type");

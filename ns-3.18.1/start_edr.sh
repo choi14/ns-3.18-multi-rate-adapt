@@ -9,7 +9,7 @@ for seed in $(seq $iter_start $iter_end);
 do
 	for bound in 20 30
 	do
-		for feedbackType in 3   
+		for EDRtype in 0 1 2 3 4   
 		do
 			for rxNodeNum in 1 10 
 			do
@@ -17,13 +17,13 @@ do
 				do
 					for doppler in 0.1 
 					do
-						for eta in 0 2 4 6 8 10
+						for eta in 1 2 3 4 5
 						do
-							for delta in 0.1 0.5 0.9
+							for delta in 0.1 0.9
 							do
-								for rho in 0.1 0.5 0.9
+								for rho in 0.1 0.9
 								do
-								./waf --run "scratch/test_r2 --FeedbackType=$feedbackType --Seed=$seed --RxNodeNum=$rxNodeNum --FeedbackPeriod=$period --Doppler=$doppler --Bound=$bound --Eta=$eta --Delta=$delta --Rho=$rho"
+								./waf --run "scratch/test_r2 --EDRtype=$EDRtype --Seed=$seed --RxNodeNum=$rxNodeNum --FeedbackPeriod=$period --Doppler=$doppler --Bound=$bound --Eta=$eta --Delta=$delta --Rho=$rho"
 								done
 							done
 						done

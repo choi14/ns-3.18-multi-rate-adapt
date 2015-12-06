@@ -45,6 +45,23 @@ NS_LOG_COMPONENT_DEFINE ("MacLow");
 
 namespace ns3 {
 
+NS_OBJECT_ENSURE_REGISTERED (MacLow);
+
+TypeId
+MacLow::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::MacLow")
+    .SetParent<Object> ()
+    .AddConstructor<MacLow> ()
+		.AddAttribute ("EDRtype",
+				"Type of EDR Calculation",
+				UintegerValue (0),
+				MakeUintegerAccessor (&MacLow::m_edrType),
+				MakeUintegerChecker<uint32_t> ())
+		;
+	return tid;
+}
+
 MacLowTransmissionListener::MacLowTransmissionListener ()
 {
 }
@@ -334,6 +351,9 @@ MacLow::MacLow ()
 		m_lossPacket.push_back(0);
 		m_perOfRate.push_back(0);
 	}
+	
+	// EDR type
+	m_edrTypeInitialize = true;
 }
 
 
@@ -599,30 +619,154 @@ MacLow::CalculateEwma (void)
 	m_ewmaRssi = (1-m_alpha)*m_ewmaRssi + m_alpha*10*std::log10(m_ewmaRssi);
 	m_ewmaSnr = (1-m_alpha)*m_ewmaSnr + m_alpha*10*std::log10(m_rxSnr); 
 }
+void
+MacLow::CalculateEDR0 (double snrDiff, double rssiDiff)
+{
+	m_devRssi = (1-m_rho)*m_devRssi + m_rho*rssiDiff;
+	m_devSnr = (1-m_rho)*m_devSnr + m_rho*snrDiff;
+	m_estRssi = m_avgRssi - m_eta*m_devRssi;
+	m_estSnr = m_avgSnr - m_eta*m_devSnr;
+	
+	NS_LOG_INFO("edrType: " << m_edrType << " m_avgRssi: " << m_avgRssi << " m_avgSnr: " << m_avgSnr
+			<< " snrDiff: " << snrDiff << " rssiDiff: " << rssiDiff << " m_estRssi: "
+			<< m_estRssi << " m_estSnr: " << m_estSnr);
+}
+void
+MacLow::CalculateEDR1 (double snrDiff, double rssiDiff)
+{
+	if (m_edrTypeInitialize == true)
+	{
+		m_maxSnrDiff = snrDiff;
+		m_maxRssiDiff = rssiDiff;
+		m_edrTypeInitialize = false;
+	}
+	else 
+	{
+		if(snrDiff > m_maxSnrDiff)
+			m_maxSnrDiff = snrDiff;
+		if(rssiDiff > m_maxRssiDiff)
+			m_maxRssiDiff = rssiDiff;
+	}
+	m_estRssi = m_avgRssi - m_maxSnrDiff;
+	m_estSnr = m_avgSnr - m_maxRssiDiff;
+	NS_LOG_INFO("edrType: " << m_edrType << " m_avgRssi: " << m_avgRssi << " m_avgSnr: " << m_avgSnr
+			<< " snrDiff: " << snrDiff << " rssiDiff: " << rssiDiff << " m_estRssi: "
+			<< m_estRssi << " m_estSnr: " << m_estSnr);
+	NS_LOG_INFO("m_maxSnrDiff: " << m_maxSnrDiff << " m_maxRssiDiff: " << m_maxRssiDiff);
+}
+void
+MacLow::CalculateEDR2 (double rxSnr, double rxRssi)
+{
+	m_minSnr = 10*std::log10(rxSnr);
+	m_minRssi = 10*std::log10(rxRssi);
+
+	if(m_edrTypeInitialize == true)
+	{
+		m_estSnr = m_minSnr;
+		m_estRssi = m_minRssi;
+		m_edrTypeInitialize = false;
+	}
+	else 
+	{
+		if(m_minSnr < m_estSnr)
+			m_estSnr = m_minSnr;
+		if(m_minRssi < m_estRssi)
+			m_estRssi = m_minRssi;
+	}
+	NS_LOG_INFO("edrType: " << m_edrType 
+			<< " m_estRssi: " << m_estRssi << " m_estSnr: " << m_estSnr);
+}
+void
+MacLow::CalculateEDR3 (double snrDiff, double rssiDiff)
+{
+	m_devRssi = (1-m_rho)*m_devRssi + m_rho*rssiDiff;
+	m_devSnr = (1-m_rho)*m_devSnr + m_rho*snrDiff;
+	
+	if (m_edrTypeInitialize == true)
+	{
+		m_maxSnrDev = m_devSnr;
+		m_maxRssiDev = m_devRssi;
+		m_edrTypeInitialize = false;
+	}
+	else 
+	{
+		if(m_devSnr > m_maxSnrDev)
+			m_maxSnrDev = m_devSnr;
+		if(m_devRssi > m_maxRssiDev)
+			m_maxRssiDev= m_devRssi;
+	}
+	m_estRssi = m_avgRssi - m_eta*m_maxRssiDev;
+	m_estSnr = m_avgSnr - m_eta*m_maxSnrDev;
+	NS_LOG_INFO("edrType: " << m_edrType << " m_maxSnrDev: " << m_maxSnrDev 
+			<< " m_estRssi: " << m_estRssi << " m_estSnr: " << m_estSnr);
+}
+void
+MacLow::CalculateEDR4 (double snrDiff, double rssiDiff)
+{
+	
+	if (m_edrTypeInitialize == true)
+	{
+		m_devRssi = 5;
+		m_devSnr = 5;
+		m_edrTypeInitialize = false;
+	}
+	else 
+	{
+		if(snrDiff > 5)
+			m_devSnr = (1-m_rho)*m_devSnr + m_rho*snrDiff;
+		if(rssiDiff > 5)
+			m_devRssi = (1-m_rho)*m_devRssi + m_rho*rssiDiff;
+	}
+	m_estRssi = m_avgRssi - m_eta*m_devRssi;
+	m_estSnr = m_avgSnr - m_eta*m_devSnr;
+	NS_LOG_INFO("edrType: " << m_edrType << " m_devSnR: " << m_devSnr 
+			<< " m_estRssi: " << m_estRssi << " m_estSnr: " << m_estSnr);
+}
+
 void 
 MacLow::CalculateEDR (void)
 {
+	if (m_avgRssi == 0)
+	{
+		m_avgRssi = 10*std::log10(m_rxRssi);
+		return;
+	}
+	if (m_avgSnr == 0)
+	{
+		m_avgSnr = 10*std::log10(m_rxSnr);
+		return;
+	}
+
 	m_avgRssi = (1-m_delta)*m_avgRssi + m_delta*10*std::log10(m_rxRssi);
 	m_avgSnr = (1-m_delta)*m_avgSnr + m_delta*10*std::log10(m_rxSnr);
-	
+
 	double snrDiff = m_avgSnr - 10*std::log10(m_rxSnr);
 	double rssiDiff = m_avgRssi - 10*std::log10(m_rxRssi);
-	
-	if(rssiDiff > 0)
-		m_devRssi = (1-m_rho)*m_devRssi + m_rho*rssiDiff;
-	else
-		m_devRssi = (1-m_rho)*m_devRssi - m_rho*rssiDiff;
-	
-	if(snrDiff > 0)
-		m_devSnr = (1-m_rho)*m_devSnr + m_rho*snrDiff;
-	else
-		m_devSnr = (1-m_rho)*m_devSnr - m_rho*snrDiff;
-	
-	m_estRssi = m_avgRssi - m_eta*m_devRssi;
-	m_estSnr = m_avgSnr - m_eta*m_devSnr;
-	NS_LOG_INFO("m_avgRssi: " << m_avgRssi << " m_avgSnr: " << m_avgSnr
-			<< " snrDiff: " << snrDiff << " rssiDiff: " << rssiDiff << " m_estRssi: "
-			<< m_estRssi << " m_estSnr: " << m_estSnr);
+
+	if(snrDiff < 0){
+		snrDiff = -1*snrDiff;}
+	if(rssiDiff < 0){
+		rssiDiff = -1*rssiDiff;}
+
+	switch (m_edrType)
+	{
+		case 0:
+			CalculateEDR0 (snrDiff, rssiDiff); 
+			break;
+		case 1:
+			CalculateEDR1 (snrDiff, rssiDiff);
+			break;
+		case 2:
+			CalculateEDR2 (m_rxSnr, m_rxRssi);
+			break;
+		case 3:
+			CalculateEDR3 (snrDiff, rssiDiff);
+			break;
+		case 4:
+			CalculateEDR4 (snrDiff, rssiDiff);
+			break;
+	}
+
 }
 double
 MacLow::GetRxSnr (void)
@@ -787,6 +931,7 @@ MacLow::GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta
 			m_rxInfo.Snr = (int32_t)m_estSnr;
 			
 			double currentSnr = m_estSnr;
+			//currentSnr = -5;
 			m_rxInfo.perRate.perMCS0 = MacLowCalculatePdr(0, currentSnr);
 			m_rxInfo.perRate.perMCS1 = MacLowCalculatePdr(1, currentSnr);
 			m_rxInfo.perRate.perMCS2 = MacLowCalculatePdr(2, currentSnr);
@@ -795,6 +940,8 @@ MacLow::GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta
 			m_rxInfo.perRate.perMCS5 = MacLowCalculatePdr(5, currentSnr);
 			m_rxInfo.perRate.perMCS6 = MacLowCalculatePdr(6, currentSnr);
 			m_rxInfo.perRate.perMCS7 = MacLowCalculatePdr(7, currentSnr);
+
+			NS_LOG_INFO ("[MacLow] rxInfo.per" << m_rxInfo.perRate.perMCS0 << " " << m_rxInfo.perRate.perMCS1 << " " << m_rxInfo.perRate.perMCS2 << " " << m_rxInfo.perRate.perMCS3 << " " << m_rxInfo.perRate.perMCS4 << " " << m_rxInfo.perRate.perMCS5 << " " << m_rxInfo.perRate.perMCS6 << " " << m_rxInfo.perRate.perMCS7);
 			
 			/*
 			m_rxInfo.perRate.perMCS0 = m_perOfRate[0];
@@ -846,8 +993,10 @@ MacLow::MacLowCalculatePdr(uint32_t k, double currentSnr)
 	double nSymbols = ((databits+80)*8+22)/coderate/ofdmbits;
 	uint32_t nbits = ((uint32_t)nSymbols +1)*ofdmbits;
 
-	m_snrLinear = std::pow (10.0, m_rxInfo.Snr/10.0); // m_minSnrLinear: log->linear
+	m_snrLinear = std::pow (10.0, currentSnr/10.0); // m_minSnrLinear: log->linear
 	double Pdr = m_phy->CalculatePdr (mode, m_snrLinear, nbits);
+
+  //NS_LOG_INFO ("[MacLow] Pdr: " << Pdr);
 
 	return 1000-Pdr*1000;
 }

@@ -566,8 +566,7 @@ AdhocWifiMac::GroupRateAdaptation (void)
 			NS_LOG_INFO("m_minSnr(dB): " << m_minSnr <<
 					" m_minSnr(ratio): " << std::pow(10.0, m_minSnr/10.0)); 
 
-			//if(m_minSnr > 3.0)
-			//{
+			//if(m_minSnr > 3.0){
 				m_firstnt = true;
 				m_minSnrLinear = std::pow (10.0, m_minSnr/10.0); // m_minSnrLinear: log->linear
 				uint32_t NBasicMode = m_stationManager->GetNBasicModes ();
@@ -625,6 +624,7 @@ AdhocWifiMac::GroupRateAdaptation (void)
 						{
 							tempBurstsize = 13;
 						}
+
 						NS_LOG_INFO("m_k: " << (uint16_t)m_k << " Pdr: " << (uint16_t)(Pdr*100) << " Pdr: " << Pdr);
 						duration = m_phy->CalculateTxDuration(databits+80, v, preamble); 
 						double nt = tempBurstsize * duration.GetMicroSeconds ();
@@ -726,6 +726,7 @@ AdhocWifiMac::GroupRateAdaptation (void)
 						<< " GroupTxMcs: " << m_GroupTxMcs);
 			/*
 			} // if m_minSnr > 3
+			
 			else
 			{
 				NS_LOG_INFO("m_minSnr: " << m_minSnr << " < 3 dB and Mcs: 0 burstsize: 20");

@@ -380,6 +380,7 @@ std::ostream &operator << (std::ostream &os, const MacLowTransmissionParameters 
 class MacLow : public Object
 {
 public:
+  static TypeId GetTypeId (void);
   typedef Callback<void, Ptr<Packet>, const WifiMacHeader*> MacLowRxCallback;
 
   MacLow ();
@@ -523,6 +524,7 @@ public:
   void RegisterBlockAckListenerForAc (enum AcIndex ac, MacLowBlockAckEventListener *listener);
   double GetRxSnr(void);
   uint8_t GetRxMcs(void);
+	uint32_t m_edrType;
 
 private:
   void CancelAllEvents (void);
@@ -696,6 +698,12 @@ private:
 	//jychoi
 	void CalculateEwma (void);
 	void CalculateEDR (void);
+	void CalculateEDR0 (double snrDiff, double rssiDiff);
+	void CalculateEDR1 (double snrDiff, double rssiDiff);
+	void CalculateEDR2 (double rxSnr, double rxRssi);
+	void CalculateEDR3 (double snrDiff, double rssiDiff);
+	void CalculateEDR4 (double snrDiff, double rssiDiff);
+	
 	void SetRxSnrVector (double rxSnr);
 	void SetRxRssiVector (double rxRssi);
 	double MacLowCalculatePdr (uint32_t k, double currentSnr);
@@ -722,7 +730,19 @@ private:
 	double m_estRssi;
 
 	double m_snrLinear;
-  
+  // EDR Type
+	bool m_edrTypeInitialize;
+	// Type 1
+	double m_maxSnrDiff;
+	double m_maxRssiDiff;
+	// Type 2
+	double m_minSnr;
+	double m_minRssi;
+	// Type 3
+	double m_maxSnrDev;
+	double m_maxRssiDev;
+	// Type 4
+
 	// Listerner needed to monitor when a channel switching occurs.
   class PhyMacLowListener * m_phyMacLowListener;
 
