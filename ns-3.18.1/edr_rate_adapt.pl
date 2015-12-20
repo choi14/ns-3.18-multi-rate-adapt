@@ -1,23 +1,23 @@
 use warnings;
 use strict;
 
-my $seedNum = 50;
+my $seedNum = 4;
 my $numVal = 4;
 my $i = 0;
 my $seed = 0;
 
-foreach my $edrType (0, 1, 2, 3, 4){
-foreach my $numNode (1, 10){
-	foreach my $period (100, 500, 1000){
+foreach my $edrType (0, 3, 4){
+foreach my $numNode (10){
+	foreach my $period (100, 1000){
 		foreach my $doppler (0.1){
-			foreach my $bound (20, 30){
+			foreach my $bound (10, 20){
 
 				print "Bound: $bound Period: $period Doppler: $doppler NumNode: $numNode\n";
-				my $output_filename1="storage_results/output_edr3_151204/result_per-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType".".txt";
+				my $output_filename1="storage_results/output_edr4_151206/result_per-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType".".txt";
 				open(OUT1, ">$output_filename1") ||die "Failed opening.\n";
-				my $output_filename2="storage_results/output_edr3_151204/result_air-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType".".txt";
+				my $output_filename2="storage_results/output_edr4_151206/result_air-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType".".txt";
 				open(OUT2, ">$output_filename2") ||die "Failed opening.\n";
-				my $output_filename3="storage_results/output_edr3_151204/result_node-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType".".txt";
+				my $output_filename3="storage_results/output_edr4_151206/result_node-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType".".txt";
 				open(OUT3, ">$output_filename3") ||die "Failed opening.\n";
 
 				foreach my $eta (1, 2, 3, 4, 5){
@@ -44,9 +44,9 @@ foreach my $numNode (1, 10){
 							my $avgNr = 0;
 							my $seedCount = 0;
 
-							#foreach my $seed (0,1,2,5,6,7,10,11,12,15,16,17,20,21,22,23,25,26,27,28,30,31,35,36,40,41,42,43,45,46,47,48){
-							for ($seed = 0; $seed < $seedNum; $seed++){
-								my $input_filename= "storage_results/result_edr3_151204/edr_"."$eta"."_"."$delta"."_"."$rho"."_"."$seed"."_"."$numNode"."_"."$period"."_"."$doppler"."_"."$bound"."_"."$edrType".".txt";
+							foreach my $seed (5, 8, 15, 18){
+							#for ($seed = 0; $seed < $seedNum; $seed++){
+								my $input_filename= "storage_results/result_edr4_151206/edr_"."$eta"."_"."$delta"."_"."$rho"."_"."$seed"."_"."$numNode"."_"."$period"."_"."$doppler"."_"."$bound"."_"."$edrType".".txt";
 								open(IN, "$input_filename") ||die "Failed opening $input_filename.\n";
 
 								my @per_seed = (0)x$numNode;

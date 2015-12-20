@@ -73,14 +73,14 @@ main (int argc, char *argv[])
 {
 	uint32_t txNodeNum = 1;
 	uint32_t rxNodeNum = 1;
-	uint32_t seed = 1; // 1:1:100 
+	uint32_t seed = 0; // 1:1:100 
 	uint32_t rateAdaptType = 0; // 0, 1, 2 (0 = n*t) 
 	uint32_t feedbackType = 3; // 0, 1, 2, 3, 4
 	uint32_t nc_k = 10;	
-	uint64_t feedbackPeriod = 100; // MilliSeconds
+	uint64_t feedbackPeriod = 1000; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
-	double bound = 20.0; 
-	double endTime = 20;
+	double bound = 10.0; 
+	double endTime = 100;
 	double perThreshold = 0.001;
 	// feedbackType 0
 	double percentile = 0.9; // [0, 1]
@@ -94,6 +94,7 @@ main (int argc, char *argv[])
 	double rho = 0.1;
 	//EDR type
 	uint32_t edrType = 0;
+	uint32_t linearTime = 2000;
 
   double getTotalTx = 0.0;
 	double sumTotalRx = 0.0;
@@ -118,14 +119,17 @@ main (int argc, char *argv[])
 	cmd.AddValue ("Delta", "Weighting factor of SNR and deviation", delta);
 	cmd.AddValue ("Rho", "weighting factor of deviation", rho);
 	cmd.AddValue ("EDRtype", "Type of EDR Calculation", edrType);
+	cmd.AddValue ("LinearTime", "Time of Linear Decreasing/Increasing", linearTime);
 	cmd.Parse (argc, argv);
 	
 	SeedManager::SetRun(seed);
 
+	/*
 	Config::SetDefault ("ns3::YansWifiPhy::CcaMode1Threshold", DoubleValue (-200));
 	Config::SetDefault ("ns3::YansWifiPhy::EnergyDetectionThreshold", DoubleValue (-200));
 	Config::SetDefault ("ns3::WifiMacQueue::MaxPacketNumber", UintegerValue (4000));
-	
+	*/
+
 	/*NS_LOG_UNCOND
 		("seed: " << seed 
 		 << " rateAdaptType: " << rateAdaptType << " feedbackPeriod: " << feedbackPeriod <<	" doppler: " << dopplerVelocity << " bound: " << bound
@@ -161,6 +165,7 @@ main (int argc, char *argv[])
 	Config::SetDefault ("ns3::AdhocWifiMac::Rho", DoubleValue (rho));
 	// Mac-low.cc
 	Config::SetDefault ("ns3::MacLow::EDRtype", UintegerValue (edrType));
+	Config::SetDefault ("ns3::MacLow::LinearTime", UintegerValue (linearTime));
 	
 	wifiPhy.SetChannel (wifiChannel.Create ());
 	NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default(); 
@@ -180,14 +185,15 @@ main (int argc, char *argv[])
 	txMobility.SetPositionAllocator (positionAlloc);
   txMobility.Install (txNodes.Get (0));
 
-	/*
+  	
   std::stringstream DiscRho;
 	DiscRho << "ns3::UniformRandomVariable[Min=" << bound << "|Max=" << bound << "]";	
 	rxMobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
 			"X", StringValue ("0.0"),
 			"Y", StringValue ("0.0"),
 			"Rho", StringValue (DiscRho.str() ));
-	*/
+	rxMobility.Install (rxNodes);
+	/*
 	std::stringstream Rectangle;
 	Rectangle << "ns3::UniformRandomVariable[Min=" << -0.5*bound << "|Max=" << 0.5*bound << "]";
 	rxMobility.SetPositionAllocator ("ns3::RandomRectanglePositionAllocator",
@@ -195,6 +201,7 @@ main (int argc, char *argv[])
 			"Y", StringValue (Rectangle.str ()));
 	rxMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   rxMobility.Install (rxNodes);
+	*/
 	/*
 	for (uint32_t i=0; i < rxNodes.GetN(); i++)
 	{
@@ -280,12 +287,12 @@ main (int argc, char *argv[])
 		case 3: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum << " edrType: " << edrType);
-			out_filename << "storage_results/result_edr3_151204/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << ".txt";
+			out_filename << "storage_results/result_edr3_151215/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << ".txt";
 			break;
 		case 4: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum << " edrType: " << edrType);
-			out_filename << "storage_results/result_edr4_151203/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << ".txt";
+			out_filename << "storage_results/result_edr4_151215/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << ".txt";
 			break;
 		default:
 			NS_LOG_UNCOND("Invalid type");

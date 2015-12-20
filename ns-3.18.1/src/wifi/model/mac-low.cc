@@ -58,6 +58,11 @@ MacLow::GetTypeId (void)
 				UintegerValue (0),
 				MakeUintegerAccessor (&MacLow::m_edrType),
 				MakeUintegerChecker<uint32_t> ())
+		.AddAttribute ("LinearTime",
+				"Time of Linear Decreasing/Increasing",
+				UintegerValue (2000),
+				MakeUintegerAccessor (&MacLow::m_linearTime),
+				MakeUintegerChecker<uint32_t> ())
 		;
 	return tid;
 }
@@ -344,6 +349,10 @@ MacLow::MacLow ()
 	m_delta = 0.1; //dB
 	m_rho = 0.1; //dB
 
+	m_previousInput = 0.0;
+	m_currentTime = Seconds (0.0);
+	m_previousTime = Seconds (0.0);
+
 	// Set PER per Ratio
 	for(uint8_t i=0; i<8; i++)
 	{
@@ -612,6 +621,48 @@ MacLow::GetBssid (void) const
 {
   return m_bssid;
 }
+double
+MacLow::LinearDecreasing (double input)
+{
+	m_currentTime = Simulator::Now ();
+	double timeDiff = m_currentTime.GetMilliSeconds() - m_previousTime.GetMilliSeconds();
+	NS_LOG_INFO("[Decreasing] currentTime: " << m_currentTime.GetMilliSeconds() 
+			<< " previousTime: " << m_previousTime.GetMilliSeconds());
+	NS_LOG_INFO("[Decreasing] currentTime: " << m_currentTime << " timeDiff: " << timeDiff);
+
+	double decvalue = m_previousInput * (1 - timeDiff/m_linearTime);
+	NS_LOG_INFO("input: " << input << " m_previousInput: " << m_previousInput << " decvalue: " << decvalue);
+
+	if(input > decvalue)
+	{
+		m_previousInput = input;
+		m_previousTime = m_currentTime;
+		return m_previousInput;
+	}
+	else
+		return m_previousInput;
+}
+double
+MacLow::LinearIncreasing (double input)
+{
+	m_currentTime = Simulator::Now ();
+	double timeDiff = m_currentTime.GetMilliSeconds() - m_previousTime.GetMilliSeconds();
+	NS_LOG_INFO("[Increasing] currentTime: " << m_currentTime.GetMilliSeconds() 
+			<< " previousTime: " << m_previousTime.GetMilliSeconds());
+	NS_LOG_INFO("[Increasing] currentTime: " << m_currentTime << " timeDiff: " << timeDiff);
+
+	double incvalue = m_previousInput * (1 + timeDiff/m_linearTime);
+	NS_LOG_INFO("input: " << input << " m_previousInput: " << m_previousInput << " incvalue: " << incvalue);
+
+	if(input < incvalue)
+	{
+		m_previousInput = input;
+		m_previousTime = m_currentTime;
+		return m_previousInput;
+	}
+	else
+		return m_previousInput;
+}
 void 
 MacLow::CalculateEwma (void)
 {
@@ -638,14 +689,19 @@ MacLow::CalculateEDR1 (double snrDiff, double rssiDiff)
 	{
 		m_maxSnrDiff = snrDiff;
 		m_maxRssiDiff = rssiDiff;
+		m_previousInput = snrDiff;
+		m_previousTime = Simulator::Now ();
 		m_edrTypeInitialize = false;
 	}
 	else 
 	{
+		m_maxSnrDiff = LinearDecreasing (snrDiff);
+		/*
 		if(snrDiff > m_maxSnrDiff)
 			m_maxSnrDiff = snrDiff;
 		if(rssiDiff > m_maxRssiDiff)
 			m_maxRssiDiff = rssiDiff;
+			*/
 	}
 	m_estRssi = m_avgRssi - m_maxSnrDiff;
 	m_estSnr = m_avgSnr - m_maxRssiDiff;
@@ -665,13 +721,18 @@ MacLow::CalculateEDR2 (double rxSnr, double rxRssi)
 		m_estSnr = m_minSnr;
 		m_estRssi = m_minRssi;
 		m_edrTypeInitialize = false;
+		m_previousInput = m_minSnr;
+		m_previousTime = Simulator::Now ();
 	}
 	else 
 	{
+		m_estSnr = LinearIncreasing (m_minSnr);
+		/*
 		if(m_minSnr < m_estSnr)
 			m_estSnr = m_minSnr;
 		if(m_minRssi < m_estRssi)
 			m_estRssi = m_minRssi;
+			*/
 	}
 	NS_LOG_INFO("edrType: " << m_edrType 
 			<< " m_estRssi: " << m_estRssi << " m_estSnr: " << m_estSnr);
@@ -686,14 +747,19 @@ MacLow::CalculateEDR3 (double snrDiff, double rssiDiff)
 	{
 		m_maxSnrDev = m_devSnr;
 		m_maxRssiDev = m_devRssi;
+		m_previousInput = m_devSnr;
+		m_previousTime = Simulator::Now ();
 		m_edrTypeInitialize = false;
 	}
 	else 
 	{
+		m_maxSnrDev = LinearDecreasing (m_devSnr);
+		/*
 		if(m_devSnr > m_maxSnrDev)
 			m_maxSnrDev = m_devSnr;
 		if(m_devRssi > m_maxRssiDev)
 			m_maxRssiDev= m_devRssi;
+			*/
 	}
 	m_estRssi = m_avgRssi - m_eta*m_maxRssiDev;
 	m_estSnr = m_avgSnr - m_eta*m_maxSnrDev;
@@ -726,13 +792,9 @@ MacLow::CalculateEDR4 (double snrDiff, double rssiDiff)
 void 
 MacLow::CalculateEDR (void)
 {
-	if (m_avgRssi == 0)
+	if ((m_avgRssi == 0) && (m_avgSnr == 0))
 	{
 		m_avgRssi = 10*std::log10(m_rxRssi);
-		return;
-	}
-	if (m_avgSnr == 0)
-	{
 		m_avgSnr = 10*std::log10(m_rxSnr);
 		return;
 	}
@@ -747,7 +809,7 @@ MacLow::CalculateEDR (void)
 		snrDiff = -1*snrDiff;}
 	if(rssiDiff < 0){
 		rssiDiff = -1*rssiDiff;}
-
+  //NS_LOG_INFO("snrDiff: " << snrDiff << " rssiDiff: " << rssiDiff);
 	switch (m_edrType)
 	{
 		case 0:
@@ -927,9 +989,9 @@ MacLow::GetRxInfo (uint32_t fbtype, double percentile, double alpha, double beta
 			NS_LOG_INFO ("m_lossPacket[0]: " << m_lossPacket[0] << " m_lossPacket[1]: " << m_lossPacket[1] << " m_lossPacket[2]: " << m_lossPacket[2] << " m_lossPacket[3]: " << m_lossPacket[3] << " m_lossPacket[4]: " << m_lossPacket[4] << " m_lossPacket[5]: " << m_lossPacket[5] << " m_lossPacket[6]: " << m_lossPacket[6] << " m_lossPacket[7]: " << m_lossPacket[7]);
 			NS_LOG_INFO ("m_perOfRate[0]: " << (int)m_perOfRate[0] << " m_perOfRate[1]: " << (int)m_perOfRate[1] << " m_perOfRate[2]: " << (int)m_perOfRate[2] << " m_perOfRate[3]: " << (int)m_perOfRate[3] << " m_perOfRate[4]: " << (int)m_perOfRate[4] << " m_perOfRate[5]: " << (int)m_perOfRate[5] << " m_perOfRate[6]: " << (int)m_perOfRate[6] << " m_perOfRate[7]: " << (int)m_perOfRate[7]);
 			NS_LOG_INFO ("m_rxInfo.LossPacket: " << m_rxInfo.LossPacket << " m_rxInfo.TotalPacket: " << m_rxInfo.TotalPacket);
+
 			m_rxInfo.Rssi = (int32_t)m_estRssi;
 			m_rxInfo.Snr = (int32_t)m_estSnr;
-			
 			double currentSnr = m_estSnr;
 			//currentSnr = -5;
 			m_rxInfo.perRate.perMCS0 = MacLowCalculatePdr(0, currentSnr);

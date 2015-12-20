@@ -7,17 +7,17 @@ iter_end=$2
 
 for seed in $(seq $iter_start $iter_end);
 do
-	for bound in 20 30
+	for bound in 10 20 
 	do
-		for EDRtype in 0 1 2 3 4   
+		for EDRtype in 1 2   
 		do
-			for rxNodeNum in 1 10 
+			for rxNodeNum in 10 
 			do
-				for period in 100 500 1000 
+				for period in 100 1000 
 				do
 					for doppler in 0.1 
 					do
-						for eta in 1 2 3 4 5
+						for eta in 1
 						do
 							for delta in 0.1 0.9
 							do

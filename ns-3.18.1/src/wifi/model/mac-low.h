@@ -525,6 +525,7 @@ public:
   double GetRxSnr(void);
   uint8_t GetRxMcs(void);
 	uint32_t m_edrType;
+	uint32_t m_linearTime;
 
 private:
   void CancelAllEvents (void);
@@ -696,6 +697,8 @@ private:
 	PerOfRate m_perOfRate;
 	
 	//jychoi
+	double LinearDecreasing (double input);
+	double LinearIncreasing (double input);
 	void CalculateEwma (void);
 	void CalculateEDR (void);
 	void CalculateEDR0 (double snrDiff, double rssiDiff);
@@ -711,6 +714,10 @@ private:
 	uint32_t m_rxRssiVectorSize;
 	double m_rxSnr;
 	double m_rxRssi;
+	double m_currentInput;
+	double m_previousInput;
+	Time m_currentTime;
+	Time m_previousTime;
 	
 	// type 1 EWMA
 	double m_ewmaSnr;

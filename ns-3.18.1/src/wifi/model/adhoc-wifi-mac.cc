@@ -420,10 +420,11 @@ AdhocWifiMac::SendFeedback ()
   FeedbackHdr.SetLossPacket (m_rxInfoGet.LossPacket);
   FeedbackHdr.SetTotalPacket (m_rxInfoGet.TotalPacket);
 
-
+	// feedbackType == 3 (Using NS3-CalculatePdr function)
   if (m_fbtype != 4){
   	FeedbackHdr.SetPerRate (m_rxInfoGet.perRate);
   }
+	// feedbackType == 4 (Using online-table)
   else{
 	PerRate per_rate;
 	int32_t snr = m_rxInfoGet.Snr > 0 ? m_rxInfoGet.Snr : 0;
@@ -439,8 +440,6 @@ AdhocWifiMac::SendFeedback ()
 	FeedbackHdr.SetPerRate(per_rate);
   }
 	packet->AddHeader (FeedbackHdr);
-
-
 
 	NS_LOG_INFO ("[tx feedback packet]" << " Address " << m_low->GetAddress () 
 			<< " RSSI: " << m_rxInfoGet.Rssi << " Snr: " << m_rxInfoGet.Snr 
@@ -473,6 +472,7 @@ AdhocWifiMac::SetMinPerOfMcs (void)
 	m_minPerOfMcs[5] = m_infos[0].info.perRate.perMCS5;
 	m_minPerOfMcs[6] = m_infos[0].info.perRate.perMCS6;
 	m_minPerOfMcs[7] = m_infos[0].info.perRate.perMCS7;
+	
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
 		if(m_infos[i].info.perRate.perMCS0 > m_minPerOfMcs[0])
