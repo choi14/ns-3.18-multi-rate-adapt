@@ -394,7 +394,7 @@ MacLow::DoDispose (void)
   m_sendDataEvent.Cancel ();
   m_waitSifsEvent.Cancel ();
   m_endTxNoAckEvent.Cancel ();
-   m_waitRifsEvent.Cancel();
+  m_waitRifsEvent.Cancel();
   m_phy = 0;
   m_stationManager = 0;
   delete m_phyMacLowListener;

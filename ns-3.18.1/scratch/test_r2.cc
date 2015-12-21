@@ -79,8 +79,8 @@ main (int argc, char *argv[])
 	uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 1000; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
-	double bound = 10.0; 
-	double endTime = 100;
+	double bound = 20.0; 
+	double endTime = 20;
 	double perThreshold = 0.001;
 	// feedbackType 0
 	double percentile = 0.9; // [0, 1]

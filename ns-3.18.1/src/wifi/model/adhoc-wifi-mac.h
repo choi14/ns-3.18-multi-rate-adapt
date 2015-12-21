@@ -38,6 +38,11 @@ typedef struct{
  	struct rxInfo info;	
 }StaInfo;
 
+typedef struct{
+	Ptr<const Packet> packet;
+ 	WifiMacHeader hdr;	
+}Pkthdr;
+
 uint8_t KtoNTable[10][101]={
 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,29,27,26,24,23,22,21,20,19,18,17,17,16,15,15,14,14,13,13,12,12,12,11,11,11,10,10,10,9,9,9,9,8,8,8,8,8,7,7,7,7,7,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,4,4,4,4,4,4,4,4,4,3,3,3,3,3,3,3,3,3,3,2,2,2,2,2,2,2,1},
 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,29,28,27,26,25,24,23,22,21,20,20,19,18,18,17,17,16,16,15,15,14,14,13,13,13,12,12,12,11,11,11,11,10,10,10,10,9,9,9,9,9,8,8,8,8,8,7,7,7,7,7,7,6,6,6,6,6,6,6,5,5,5,5,5,5,5,4,4,4,4,4,4,4,3,3,3,3,2},
@@ -127,6 +132,7 @@ private:
 	uint32_t m_tf_id;
 	Ptr<OnlineTableManager> m_tableManager;
 	std::vector<StaInfo> m_infos;
+	std::vector<std::vector<Pkthdr> > m_block;
 	std::vector<double> m_minPerOfMcs;
 	
 	WifiMode m_GroupTxMode;
@@ -142,6 +148,8 @@ private:
 	uint8_t m_burstsize;
 	uint16_t m_src_eid;
 	uint16_t m_last_eid;
+	uint16_t m_blockSize;
+	uint16_t m_blockIter;
 	bool m_nc_enabled;
 	uint8_t m_MNC_K;
 	uint8_t m_MNC_P;
