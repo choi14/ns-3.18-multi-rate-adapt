@@ -109,17 +109,16 @@ AdhocWifiMac::GetTypeId (void)
 				DoubleValue (0.1),
 				MakeDoubleAccessor (&AdhocWifiMac::m_rho),
 				MakeDoubleChecker<double> ())
-		.AddAttribute ("NumTraining",
+		.AddAttribute ("NumTraining", 
 				"Number of training packets per mcs", 
 				UintegerValue(100),
 				MakeUintegerAccessor (&AdhocWifiMac::m_max),
 				MakeUintegerChecker<uint16_t> ())
-		.AddAttribute ("BlockSize",
-				"Size of Interleaving Block", 
-				UintegerValue(10),
+		.AddAttribute ("BlockSize", 
+				"Size of interleaving", 
+				UintegerValue(5),
 				MakeUintegerAccessor (&AdhocWifiMac::m_blockSize),
 				MakeUintegerChecker<uint16_t> ())
-
   ;
   return tid;
 }
@@ -129,15 +128,15 @@ AdhocWifiMac::AdhocWifiMac ()
 	NS_LOG_FUNCTION (this);
 	m_initialize = false;
 	m_setMacLowValue = false;
-	m_setRobust = false; // tx rate: 6 Mb/s and N=20 (network conding)
-	m_feedbackPeriod = 100; 
+	m_setRobust = true;
+	m_feedbackPeriod = 100;
 	m_addBasicModes = 0;
 	m_minSnr = 0.0;
 	m_minSnrLinear = 0.0;
 	m_minNT = 0.0;
 	m_max = 100;
 	m_tf_id = 0;
-	m_nc_enabled = true; // use network conding
+	m_nc_enabled = true;
 	m_mcast_mcs = 0;
 	m_burstsize = 20;
 	m_src_eid = 0;
@@ -147,9 +146,8 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_k = 10;	
 	m_aid = 0;
 	start_nc = false;
-  m_blockIter = 0;	
+	m_blockIter = 0;
 
-	//m_block.resize (m_blockSize);
 	for(uint8_t i=0; i<8; i++)
 	{
 		m_minPerOfMcs.push_back(1000);
@@ -163,7 +161,6 @@ AdhocWifiMac::AdhocWifiMac ()
 
 AdhocWifiMac::~AdhocWifiMac ()
 {
-	delete[] m_block;
   NS_LOG_FUNCTION (this);
 }
 
@@ -181,80 +178,76 @@ AdhocWifiMac::SetAddress (Mac48Address address)
   RegularWifiMac::SetBssid (address);
 }
 
-void
+	void
 AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 {
-  NS_LOG_FUNCTION (this << packet << to);
-  if (m_stationManager->IsBrandNew (to))
-    {
-      // In ad hoc mode, we assume that every destination supports all
-      // the rates we support.
-      for (uint32_t i = 0; i < m_phy->GetNModes (); i++)
-        {
-          m_stationManager->AddSupportedMode (to, m_phy->GetMode (i));
-        }
-      m_stationManager->RecordDisassociated (to);
-    }
+	NS_LOG_FUNCTION (this << packet << to);
+	if (m_stationManager->IsBrandNew (to))
+	{
+		// In ad hoc mode, we assume that every destination supports all
+		// the rates we support.
+		for (uint32_t i = 0; i < m_phy->GetNModes (); i++)
+		{
+			m_stationManager->AddSupportedMode (to, m_phy->GetMode (i));
+		}
+		m_stationManager->RecordDisassociated (to);
+	}
 
-  WifiMacHeader hdr;
+	WifiMacHeader hdr;
 
-  // If we are not a QoS STA then we definitely want to use AC_BE to
-  // transmit the packet. A TID of zero will map to AC_BE (through \c
-  // QosUtilsMapTidToAc()), so we use that as our default here.
-  uint8_t tid = 0;
+	// If we are not a QoS STA then we definitely want to use AC_BE to
+	// transmit the packet. A TID of zero will map to AC_BE (through \c
+	// QosUtilsMapTidToAc()), so we use that as our default here.
+	uint8_t tid = 0;
 
-  // For now, a STA that supports QoS does not support non-QoS
-  // associations, and vice versa. In future the STA model should fall
-  // back to non-QoS if talking to a peer that is also non-QoS. At
-  // that point there will need to be per-station QoS state maintained
-  // by the association state machine, and consulted here.
-  if (m_qosSupported)
-    {
-      hdr.SetType (WIFI_MAC_QOSDATA);
-      hdr.SetQosAckPolicy (WifiMacHeader::NORMAL_ACK);
-      hdr.SetQosNoEosp ();
-      hdr.SetQosNoAmsdu ();
-      // Transmission of multiple frames in the same TXOP is not
-      // supported for now
-      hdr.SetQosTxopLimit (0);
+	// For now, a STA that supports QoS does not support non-QoS
+	// associations, and vice versa. In future the STA model should fall
+	// back to non-QoS if talking to a peer that is also non-QoS. At
+	// that point there will need to be per-station QoS state maintained
+	// by the association state machine, and consulted here.
+	if (m_qosSupported)
+	{
+		hdr.SetType (WIFI_MAC_QOSDATA);
+		hdr.SetQosAckPolicy (WifiMacHeader::NORMAL_ACK);
+		hdr.SetQosNoEosp ();
+		hdr.SetQosNoAmsdu ();
+		// Transmission of multiple frames in the same TXOP is not
+		// supported for now
+		hdr.SetQosTxopLimit (0);
 
-      // Fill in the QoS control field in the MAC header
-      tid = QosUtilsGetTidForPacket (packet);
-      // Any value greater than 7 is invalid and likely indicates that
-      // the packet had no QoS tag, so we revert to zero, which'll
-      // mean that AC_BE is used.
-      if (tid >= 7)
-        {
-          tid = 0;
-        }
-      hdr.SetQosTid (tid);
-    }
-  else
-    {
-      hdr.SetTypeData ();
-    }
+		// Fill in the QoS control field in the MAC header
+		tid = QosUtilsGetTidForPacket (packet);
+		// Any value greater than 7 is invalid and likely indicates that
+		// the packet had no QoS tag, so we revert to zero, which'll
+		// mean that AC_BE is used.
+		if (tid >= 7)
+		{
+			tid = 0;
+		}
+		hdr.SetQosTid (tid);
+	}
+	else
+	{
+		hdr.SetTypeData ();
+	}
 
-  hdr.SetAddr1 (to);
-  hdr.SetAddr2 (m_low->GetAddress ());
-  hdr.SetAddr3 (GetBssid ());
-  hdr.SetDsNotFrom ();
-  hdr.SetDsNotTo ();
+	hdr.SetAddr1 (to);
+	hdr.SetAddr2 (m_low->GetAddress ());
+	hdr.SetAddr3 (GetBssid ());
+	hdr.SetDsNotFrom ();
+	hdr.SetDsNotTo ();
 
 	if(m_initialize == false)
 	{
 		m_low->SetAlpha(m_alpha);
 		m_low->SetEDR(m_eta, m_delta, m_rho);
 		m_initialize = true;
-		
-		//NS_LOG_UNCOND("m_blockSize " << m_blockSize);
+
 		m_block = new Ptr<WifiMacQueue>[m_blockSize];
 		for(uint16_t i = 0; i < m_blockSize; i++)
 			m_block[i] = CreateObject<WifiMacQueue>();
 		m_blockIter = 0;
 	}
-
-	//if(m_src_eid > 10)
-	//	return;
 
 	// Network coding is enabled
 	if (m_nc_enabled)
@@ -266,138 +259,87 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 		if(m_MNC_Encoder.GetBufferSize() == m_MNC_K)
 		{
 			m_src_eid++;
-			NS_LOG_ERROR("Source send, eid: " << m_src_eid <<
+			NS_LOG_ERROR("Source send, eid: " << m_src_eid << 
 					" m_burstsize: " << (uint16_t)m_burstsize << " MCS: " << (uint16_t)m_mcast_mcs);
 			NS_LOG_INFO("m_blockIter: " << m_blockIter);
-			
+
 			// Encoding the packets
 			m_MNC_Encoder.Encoding(m_src_eid, m_MNC_K, m_burstsize, m_MNC_P, sys);
-			for(uint8_t i = 0; i < m_burstsize; i++)
-			{ 
-				NS_LOG_INFO("Transmit " << (uint16_t)i << "th packet, m_blockIter = " << m_blockIter << " eid = " << (uint16_t) m_src_eid);
+			for(uint16_t i = 0; i < m_burstsize; i++)
+			{
+				NS_LOG_INFO("Transmit " << i << "th packet, m_blockIter = " << m_blockIter << " eid = " << (uint16_t)m_src_eid);
 				WifiMacHeader temphdr;
 				Ptr<const Packet> encoded_packet = m_MNC_Encoder.MNC_Dequeue(&temphdr);
 
 				RateTag tag(m_mcast_mcs); // mcs
 				ConstCast<Packet> (encoded_packet)->AddPacketTag(tag);
-				//break;
-				m_block[m_blockIter]->Enqueue(encoded_packet, temphdr);
 
-				//Pkthdr pkthdr;
-				//pkthdr.packet = encoded_packet;
-				//pkthdr.hdr = temphdr;
-				//NS_LOG_INFO("m_blockIter: " << m_blockIter);
-				//m_block[m_blockIter].push_back (pkthdr);
-				//temphdr.SetWep(1);
+				m_block[m_blockIter] -> Enqueue(encoded_packet, temphdr);
 			}
 			m_MNC_Encoder.FlushAllBuffer();
-			//return;
 			m_blockIter++;
-
+			
 			if(m_blockIter != m_blockSize)
 				return;
 
-			while(true){
+			while(true)
+			{
 				bool exit_value = true;
 
-				for(uint16_t j = 0; j < m_blockIter; j++){
-					if(m_block[j]->GetSize() != 0){
+				for(uint16_t j = 0; j < m_blockIter; j++)
+				{
+					if(m_block[j]->GetSize() != 0)
+					{
 						exit_value = false;
 						break;
 					}
 				}
-				
+
 				if(exit_value)
 					break;
-
-				for(uint16_t j = 0; j < m_blockIter; j++){
+				for(uint16_t j = 0; j < m_blockIter; j++)
+				{					
 					if(m_block[j]->GetSize() == 0)
 						continue;
-					
+
 					WifiMacHeader temphdr;
+
 					Ptr<const Packet> interleaving_packet = m_block[j]->Dequeue(&temphdr);
 
 					if(m_qosSupported)
 					{
 						NS_ASSERT (tid < 8);
-						//NS_LOG_DEBUG(hdr.GetAddr1() << "edca Queue");
+						//NS_LOG_DEBUG(temphdr.GetAddr1() << "edca Queue");
 						//temphdr.SetWep(1);
 						m_edca[QosUtilsMapTidToAc(tid)]->Queue(interleaving_packet, temphdr);
 					}
 					else
 					{
-						//NS_LOG_DEBUG("dca Queue");
 						NS_LOG_INFO("dca->Queue m_block = m_block[" << j << "], size = " << m_block[j]->GetSize());
+						//NS_LOG_DEBUG("dca Queue");
 						//temphdr.SetWep(1);
 						m_dca->Queue(interleaving_packet, temphdr);
 					}
 				}
-			}
+			} // while
 			m_blockIter = 0;
+		} // Buffer is full
+	}
 
-/*
-			// m_blockIter is same as m_blockSize
-			if(m_blockSize == m_blockIter)
-			{
-				//uint16_t vsize = m_block[0].size();
-				//{
-				//	if(m_block[j].size () > vsize)
-				//	{
-				//		vsize = m_block[j].size();	
-				//	}
-				//}
-				for(uint16_t i = 0; i < vsize; i++)
-				{
-					for(uint16_t j = 0; j < m_blockIter; j++)
-					{
-						if(m_block[j]->GetSize () >= i)
-						{
-							Ptr<const Packet> packet;
-							WifiMacHeader hdr;
-							packet = m_block[j][i].packet;
-							hdr = m_block[j][i].hdr;
-
-							if(m_qosSupported)
-							{
-								NS_ASSERT (tid < 8);
-								//NS_LOG_DEBUG(hdr.GetAddr1() << "edca Queue");
-								//temphdr.SetWep(1);
-								m_edca[QosUtilsMapTidToAc(tid)]->Queue(packet, hdr);
-							}
-							else
-							{
-								//NS_LOG_DEBUG("dca Queue");
-								NS_LOG_INFO("dca->Queue m_block = m_block[" << j << "][" << i << "]");
-								//temphdr.SetWep(1);
-								m_dca->Queue(packet, hdr);
-							}
-						}
-					}
-				}
-				m_blockIter = 0;
-				m_block.clear ();
-				m_block.resize (m_blockSize);
-			}
-			*/
+	// Network coding is disabled
+	else{
+		if (m_qosSupported)
+		{
+			// Sanity check that the TID is valid
+			NS_ASSERT (tid < 8);
+			m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
 		}
-
-		// Network coding is disabled
 		else
 		{
-			if (m_qosSupported)
-			{
-				// Sanity check that the TID is valid
-				NS_ASSERT (tid < 8);
-				m_edca[QosUtilsMapTidToAc (tid)]->Queue (packet, hdr);
-			}
-			else
-			{
-				m_dca->Queue (packet, hdr);
-			}
+			m_dca->Queue (packet, hdr);
 		}
 	}
 }
-
 
 void
 AdhocWifiMac::SetLinkUpCallback (Callback<void> linkUp)
@@ -539,11 +481,10 @@ AdhocWifiMac::SendFeedback ()
   FeedbackHdr.SetLossPacket (m_rxInfoGet.LossPacket);
   FeedbackHdr.SetTotalPacket (m_rxInfoGet.TotalPacket);
 
-	// feedbackType == 3 (Using NS3-CalculatePdr function)
+
   if (m_fbtype != 4){
   	FeedbackHdr.SetPerRate (m_rxInfoGet.perRate);
   }
-	// feedbackType == 4 (Using online-table)
   else{
 	PerRate per_rate;
 	int32_t snr = m_rxInfoGet.Snr > 0 ? m_rxInfoGet.Snr : 0;
@@ -563,13 +504,6 @@ AdhocWifiMac::SendFeedback ()
 	NS_LOG_INFO ("[tx feedback packet]" << " Address " << m_low->GetAddress () 
 			<< " RSSI: " << m_rxInfoGet.Rssi << " Snr: " << m_rxInfoGet.Snr 
 			<<" LossPacket: " << m_rxInfoGet.LossPacket << " TotalPacket: " << m_rxInfoGet.TotalPacket);
-/*
-	NS_LOG_INFO ("[tx feedback packet]" 
-			<< " perMCS0: " << (int)m_rxInfoGet.perRate.perMCS0 << " perMCS1: " << m_rxInfoGet.perRate.perMCS1 
-			<< " perMCS2: " << (int)m_rxInfoGet.perRate.perMCS2 << " perMCS3: " << (int)m_rxInfoGet.perRate.perMCS3 
-			<< " perMCS4: " << (int)m_rxInfoGet.perRate.perMCS4 << " perMCS5: " << (int)m_rxInfoGet.perRate.perMCS5 
-			<< " perMCS6: " << (int)m_rxInfoGet.perRate.perMCS6 << " perMCS7: " << (int)m_rxInfoGet.perRate.perMCS7);
- */
 	NS_LOG_INFO ("[tx feedback packet]" 
 			<< " perMCS0: " << (int)FeedbackHdr.GetPerRate().perMCS0 << " perMCS1: " << (int)FeedbackHdr.GetPerRate().perMCS1 
 			<< " perMCS2: " << (int)FeedbackHdr.GetPerRate().perMCS2 << " perMCS3: " << (int)FeedbackHdr.GetPerRate().perMCS3 
@@ -591,7 +525,6 @@ AdhocWifiMac::SetMinPerOfMcs (void)
 	m_minPerOfMcs[5] = m_infos[0].info.perRate.perMCS5;
 	m_minPerOfMcs[6] = m_infos[0].info.perRate.perMCS6;
 	m_minPerOfMcs[7] = m_infos[0].info.perRate.perMCS7;
-	
 	for(uint8_t i = 0; i < vsize; i++)
 	{ 
 		if(m_infos[i].info.perRate.perMCS0 > m_minPerOfMcs[0])
@@ -859,7 +792,7 @@ AdhocWifiMac::GroupRateAdaptation (void)
 	return m_GroupTxMcs;
 }
 
-	void
+void
 AdhocWifiMac::SendTraining(void)
 {
 	NS_LOG_FUNCTION (this << m_max);
@@ -876,148 +809,151 @@ AdhocWifiMac::SendTraining(void)
 	TlHeader tl;
 	tl.SetType(TL_TF1);
 	tl.SetK(m_max);
-
+	
 	Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable> ();
 	uint16_t tmpId = (uint16_t) rand->GetInteger(0,0xffff);
 	m_tf_id = (m_tf_id != tmpId ? tmpId : ~tmpId);
-
+	
 	for (uint8_t j=0; j<8; j++){
 		for (uint32_t i = 0; i < m_max; i++)
 		{
-			Ptr<Packet> packet = Create<Packet>(1440);
+					Ptr<Packet> packet = Create<Packet>(1440);
+					
+					tl.SetSeq(i);
+					tl.SetRate(j);
+					tl.SetId(m_tf_id);
+					RateTag rtag(j);
 
-			tl.SetSeq(i);
-			tl.SetRate(j);
-			tl.SetId(m_tf_id);
-			RateTag rtag(j);
-
-			packet->AddHeader(tl);
-			packet->AddPacketTag(rtag);
-			m_dca->Queue(packet, hdr);
+					packet->AddHeader(tl);
+					packet->AddPacketTag(rtag);
+					m_dca->Queue(packet, hdr);
 		}
 	}
 }
+
 void
 AdhocWifiMac::ReceiveTl (Ptr<Packet> packet, Mac48Address from)
 {
-	NS_LOG_FUNCTION (this << packet << from);
+  NS_LOG_FUNCTION (this << packet << from);
+		
+  TlHeader tl;
+  packet->RemoveHeader(tl);
 
-	TlHeader tl;
-	packet->RemoveHeader(tl);
+  switch(tl.GetType())
+  {
+		  case TL_TF1:
+				 {
+					uint8_t rate = tl.GetRate();
+					uint32_t id = tl.GetId();
+					uint32_t seq = tl.GetSeq();
+					double snr =  m_low->GetRxSnr();
+					uint32_t snr_db =(uint32_t)(10*std::log10(snr));
 
-	switch(tl.GetType())
-	{
-		case TL_TF1:
-			{
-				uint8_t rate = tl.GetRate();
-				uint32_t id = tl.GetId();
-				uint32_t seq = tl.GetSeq();
-				double snr =  m_low->GetRxSnr();
-				uint32_t snr_db =(uint32_t)(10*std::log10(snr));
-
-				//NS_LOG_INFO("Rate: " << rate << " Id: " << id << " Seq: " << seq << " Snr: " << snr_db);
-				m_tableManager->InitialTable(seq, id, rate, snr_db); 	
-
-				break;
-			}
+					//NS_LOG_INFO("Rate: " << rate << " Id: " << id << " Seq: " << seq << " Snr: " << snr_db);
+					m_tableManager->InitialTable(seq, id, rate, snr_db); 	
+			
+					break;
+				 }
 		default:
-			NS_ASSERT(false);
-			return;
-	}
+			  NS_ASSERT(false);
+			  return;
+  }
 }
+
 void
 AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 {
-	Mac48Address from = hdr->GetAddr2 ();
-	Mac48Address to = hdr->GetAddr1 ();
+  		Mac48Address from = hdr->GetAddr2 ();
+  		Mac48Address to = hdr->GetAddr1 ();
+		
+		CoefficientHeader coeffi; 
+		packet->PeekHeader(coeffi);
 
-	CoefficientHeader coeffi; 
-	packet->PeekHeader(coeffi);
+		uint16_t eid = coeffi.GetEid();
+		uint16_t seq = coeffi.GetSeq();
+		uint16_t nc_nn = coeffi.GetN();
+		uint8_t rate = m_low->GetRxMcs();
+		double snr = m_low->GetRxSnr();
+		uint32_t snr_db =(uint32_t)(10*std::log10(snr));
 
-	uint16_t eid = coeffi.GetEid();
-	uint16_t seq = coeffi.GetSeq();
-	uint16_t nc_nn = coeffi.GetN();
-	uint8_t rate = m_low->GetRxMcs();
-	double snr = m_low->GetRxSnr();
-	uint32_t snr_db =(uint32_t)(10*std::log10(snr));
+		if (start_nc == false){
+			for (uint8_t i=0; i < 8; i++){	
+				m_tableManager->FillingBlank(i);
+			}
+			m_tableManager->Monotonicity();
 
-	if (start_nc == false){
-		for (uint8_t i=0; i < 8; i++){	
-			m_tableManager->FillingBlank(i);
+  			//NS_LOG_UNCOND("AID " << m_aid << " Init table");
+			//m_tableManager->PrintOnlineTable(std::cout);
+
+			uint8_t n = coeffi.GetN();
+			m_tableManager->SetN((uint16_t)n);
+			start_nc = true;
 		}
-		m_tableManager->Monotonicity();
+		
+		m_tableManager->SetN(nc_nn);
+		m_tableManager->UpdateTable(seq, eid, rate, snr_db);	
+		NS_LOG_ERROR("Eid: " << eid << "Seq: " << seq);
 
-		//NS_LOG_UNCOND("AID " << m_aid << " Init table");
-		//m_tableManager->PrintOnlineTable(std::cout);
+		if (eid <= m_last_eid)
+				return;
 
-		uint8_t n = coeffi.GetN();
-		m_tableManager->SetN((uint16_t)n);
-		start_nc = true;
-	}
+		for(MNC_Decoder_QueueI iter = m_decoder_queue.begin(); iter != m_decoder_queue.end(); iter++){
+				if(iter->GetEid() < eid){
+						if (iter->GetBufferSize() > 0)
+								NS_LOG_ERROR("New Eid coming. " << (uint16_t)iter->GetBufferSize() << " Packets are in Old buffer." );
+						iter->Systematicing();
 
-	m_tableManager->SetN(nc_nn);
-	m_tableManager->UpdateTable(seq, eid, rate, snr_db);	
-	NS_LOG_ERROR("Eid: " << eid << "Seq: " << seq);
+						uint8_t size = iter->GetSBufferSize();
+						for(uint8_t i = 0; i < size; i++){
+								WifiMacHeader remain_hdr;
+								Ptr<const Packet> remain_packet = iter->MNC_Rx_SDequeue(&remain_hdr);
+								Ptr<Packet> forward_packet = remain_packet->Copy();
+								ForwardUp (forward_packet, from, to);
+						} //if
+						m_last_eid = iter->GetEid();
+				} 
+		}//for
 
-	if (eid <= m_last_eid)
-		return;
-
-	for(MNC_Decoder_QueueI iter = m_decoder_queue.begin(); iter != m_decoder_queue.end(); iter++){
-		if(iter->GetEid() < eid){
-			if (iter->GetBufferSize() > 0)
-				NS_LOG_ERROR("New Eid coming. " << (uint16_t)iter->GetBufferSize() << " Packets are in Old buffer." );
-			iter->Systematicing();
-
-			uint8_t size = iter->GetSBufferSize();
-			for(uint8_t i = 0; i < size; i++){
-				WifiMacHeader remain_hdr;
-				Ptr<const Packet> remain_packet = iter->MNC_Rx_SDequeue(&remain_hdr);
-				Ptr<Packet> forward_packet = remain_packet->Copy();
-				ForwardUp (forward_packet, from, to);
-			} //if
-			m_last_eid = iter->GetEid();
-		} 
-	}//for
-
-	if (eid <= m_last_eid)
-		return;
-	MNC_Decoder_QueueI iter;
-	for(iter = m_decoder_queue.begin(); iter != m_decoder_queue.end(); iter++){
-		if(iter->GetEid() == eid){
-			break;
+		if (eid <= m_last_eid)
+				return;
+		MNC_Decoder_QueueI iter;
+		for(iter = m_decoder_queue.begin(); iter != m_decoder_queue.end(); iter++){
+				if(iter->GetEid() == eid){
+						break;
+				}
 		}
-	}
-	if(iter == m_decoder_queue.end()){
-		MNC_Decoder decoder;
-		decoder.SetEid(eid);
-		decoder.MNC_Rx_Enqueue(packet, hdr);
-		m_decoder_queue.push_back(decoder);
-		return;
-	}
-
-	iter->MNC_Rx_Enqueue(packet, hdr);
-
-	if(iter->GetBufferSize() >= m_MNC_K){
-		NS_LOG_ERROR("Decoding Try: " << eid );
-
-		if(!(iter->Decoding(m_MNC_K, m_MNC_P, false))){
-			NS_LOG_ERROR("Decoding Failure: " << eid);
-			return;
-		}
-		else{
-			NS_LOG_ERROR("Decoding Success: " << eid);
+		if(iter == m_decoder_queue.end()){
+				MNC_Decoder decoder;
+				decoder.SetEid(eid);
+				decoder.MNC_Rx_Enqueue(packet, hdr);
+				m_decoder_queue.push_back(decoder);
+				return;
 		}
 
-		for(uint8_t i = 0; i < m_MNC_K; i++){
-			WifiMacHeader temphdr;
-			Ptr<const Packet> decoded_packet = iter->MNC_Rx_DDequeue(&temphdr);
-			Ptr<Packet> forward_packet = decoded_packet->Copy();
-			ForwardUp (forward_packet, from, to);
-		} //for
+		iter->MNC_Rx_Enqueue(packet, hdr);
 
-		m_last_eid = iter->GetEid();
-	}
+		if(iter->GetBufferSize() >= m_MNC_K){
+				NS_LOG_ERROR("Decoding Try: " << eid );
+
+				if(!(iter->Decoding(m_MNC_K, m_MNC_P, false))){
+						NS_LOG_ERROR("Decoding Failure: " << eid);
+						return;
+				}
+				else{
+						NS_LOG_ERROR("Decoding Success: " << eid);
+				}
+
+				for(uint8_t i = 0; i < m_MNC_K; i++){
+						WifiMacHeader temphdr;
+						Ptr<const Packet> decoded_packet = iter->MNC_Rx_DDequeue(&temphdr);
+						Ptr<Packet> forward_packet = decoded_packet->Copy();
+						ForwardUp (forward_packet, from, to);
+				} //for
+			
+				m_last_eid = iter->GetEid();
+		}
 }
+
 void
 AdhocWifiMac::SetBasicModes(void)
 {
@@ -1036,10 +972,10 @@ AdhocWifiMac::SetBasicModes(void)
 	m_tableManager->SetPhy(m_phy);
 	m_tableManager->GenerateCorrectTable();
 }
+
 void
-AdhocWifiMac::SetAid(uint32_t aid)
-{
-	m_aid = aid;
+AdhocWifiMac::SetAid(uint32_t aid){
+		m_aid = aid;
 }
 
 } // namespace ns3

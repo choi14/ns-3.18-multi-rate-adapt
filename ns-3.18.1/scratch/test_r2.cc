@@ -79,7 +79,7 @@ main (int argc, char *argv[])
 	uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 1000; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
-	double bound = 20.0; 
+	double bound = 10.0; 
 	double endTime = 20;
 	double perThreshold = 0.001;
 	// feedbackType 0
@@ -123,7 +123,7 @@ main (int argc, char *argv[])
 	cmd.AddValue ("Rho", "weighting factor of deviation", rho);
 	cmd.AddValue ("EDRtype", "Type of EDR Calculation", edrType);
 	cmd.AddValue ("LinearTime", "Time of Linear Decreasing/Increasing", linearTime);
-	cmd.AddValue ("BlockSize", "weighting factor of deviation", blockSize);
+	cmd.AddValue ("BlockSize", "Size of interleaving block", blockSize);
 	cmd.Parse (argc, argv);
 	
 	SeedManager::SetRun(seed);
