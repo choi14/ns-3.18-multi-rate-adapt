@@ -88,9 +88,13 @@ public:
 	void UpdateInfo(Mac48Address addr, struct rxInfo info);
 	void SendTraining(void);
   void SetBasicModes(void);
+	uint32_t GetRxNum(void);
+	uint32_t GetTxNum(void);
 	struct rxInfo m_rxInfoSet;
   struct rxInfo m_rxInfoGet;
   void SetAid (uint32_t aid);
+	uint32_t m_rxNumBeforeNC;
+	uint32_t m_txNumBeforeNC;
 
 private:
   virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);

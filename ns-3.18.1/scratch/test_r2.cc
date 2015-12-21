@@ -75,8 +75,8 @@ main (int argc, char *argv[])
 	uint32_t rxNodeNum = 1;
 	uint32_t seed = 0; // 1:1:100 
 	uint32_t rateAdaptType = 0; // 0, 1, 2 (0 = n*t) 
-	uint32_t feedbackType = 3; // 0, 1, 2, 3, 4
-	uint32_t nc_k = 10;	
+	uint32_t feedbackType = 4; // 0, 1, 2, 3, 4
+	//uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 1000; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
 	double bound = 10.0; 
@@ -99,7 +99,7 @@ main (int argc, char *argv[])
 	//blockSize
 	uint16_t blockSize = 5;
 
-  double getTotalTx = 0.0;
+  //double getTotalTx = 0.0;
 	double sumTotalRx = 0.0;
 	std::vector<double> getTotalRx;
 	getTotalRx.clear ();
@@ -297,7 +297,7 @@ main (int argc, char *argv[])
 		case 4: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum << " edrType: " << edrType);
-			out_filename << "storage_results/result_edr4_151215/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << ".txt";
+			out_filename << "storage_results/result_edr_test/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << ".txt";
 			break;
 		default:
 			NS_LOG_UNCOND("Invalid type");
@@ -310,37 +310,51 @@ main (int argc, char *argv[])
 	//fout << "multicastrateadapt_seed" << seed << "_rateAdaptType" << rateAdaptType << "_feedbackPeriod" << feedbackPeriod <<  "_doppler" << dopplerVelocity << "_bound" << bound << 
 	//	" feedbackType: " << feedbackType << " percentile: " << percentile << " alpha: " << alpha << " beta: " << beta << std::endl;
 	
+	//Ptr<WifiNetDevice> txNetDevice = txDevice.Get(0)->GetObject<WifiNetDevice> ();
+	//Ptr<WifiMac> txMac = txNetDevice->GetMac ();
+	//Ptr<RegularWifiMac> txRegMac = DynamicCast<RegularWifiMac> (txMac);
+	//Ptr<SbraWifiManager> sbraWifi = DynamicCast<SbraWifiManager>(txRegMac->GetWifiRemoteStationManager());
+
+	// Number of tx packet from source node before network condig
+	Ptr<WifiNetDevice> txNetDevice = txDevice.Get(0)->GetObject<WifiNetDevice> ();
+	Ptr<WifiMac> txMac = txNetDevice->GetMac ();
+	Ptr<AdhocWifiMac> txAdhocMac = DynamicCast<AdhocWifiMac> (txMac);
+	uint32_t txNum = txAdhocMac->GetTxNum ();
+	NS_LOG_UNCOND("Source node sent (AdhocWifiMac): " << txNum);
+	
+	Ptr<WifiNetDevice> rxNetDevice = rxDevice.Get(0)->GetObject<WifiNetDevice> ();
+	Ptr<WifiMac> rxMac = rxNetDevice->GetMac ();
+	Ptr<AdhocWifiMac> rxAdhocMac = DynamicCast<AdhocWifiMac> (rxMac);
+	uint32_t rxNum = rxAdhocMac->GetRxNum ();
+	NS_LOG_UNCOND("Node1 received (AdhocWifiMac): " << rxNum);
+	//NS_LOG_UNCOND("AvgPer: " << 1 - (double)rxNum/(double)txNum);
+	
+	fout << "Source node sent: " << txNum << std::endl;
+	
+	/*
 	Ptr<OnOffApplication> onof = txApp.Get(0)->GetObject<OnOffApplication> ();
 	getTotalTx = nc_k*(onof->GetTotalTx ()/1000/nc_k);
 	NS_LOG_UNCOND("Source node sent: " << getTotalTx);
-	fout << "Source node sent: " << getTotalTx << std::endl;
+	*/
 
 	for (uint32_t i = 0; i < rxApp.GetN(); i++)
 	{
 		Ptr<PacketSink> sink2 = rxApp.Get(i)->GetObject<PacketSink> ();
 		getTotalRx.push_back(sink2->GetTotalRx ()/1000);
-		NS_LOG_UNCOND("Node " << i+1 << " received: " << getTotalRx[i]);
+		//NS_LOG_UNCOND("Node " << i+1 << " received: " << getTotalRx[i]);
 		fout << "Node " << i+1 << " received: " << getTotalRx[i] << std::endl;
 		sumTotalRx += getTotalRx[i];
 	}
-
 	double totaltime = txtime + rxtime + idletime + ccatime + switchtime;
 	double airtime = (totaltime - idletime)/totaltime;
-
-	Ptr<WifiNetDevice> txNetDevice = txDevice.Get(0)->GetObject<WifiNetDevice> ();
-	Ptr<WifiMac> txMac = txNetDevice->GetMac ();
-	Ptr<RegularWifiMac> txRegMac = DynamicCast<RegularWifiMac> (txMac);
-	Ptr<SbraWifiManager> sbraWifi = DynamicCast<SbraWifiManager>(txRegMac->GetWifiRemoteStationManager());
-
-	NS_LOG_UNCOND("AirTime: " << airtime);
-	NS_LOG_UNCOND("AvgPer: " << 1 - sumTotalRx/(getTotalTx*rxNodeNum));
-	
 	fout << "AirTime: " << airtime << std::endl;
 	fout.close();
+	NS_LOG_UNCOND("AirTime: " << airtime);
+	NS_LOG_UNCOND("AvgPer: " << 1 - sumTotalRx/(txNum*rxNodeNum));
 
 	Simulator::Destroy ();
-	NS_LOG_INFO("Throughput: "<< (double)data*8/1000/1000/endTime << " Mbps");
-	NS_LOG_INFO("rxdrop: "<<rxdrop);
-	NS_LOG_INFO("rxnum: "<<rxnum);
-	NS_LOG_INFO("PER: "<<(double)(rxdrop)/(double)(rxnum+rxdrop));
+	//NS_LOG_INFO("Throughput: "<< (double)data*8/1000/1000/endTime << " Mbps");
+	//NS_LOG_INFO("rxdrop: "<<rxdrop);
+	//NS_LOG_INFO("rxnum: "<<rxnum);
+	//NS_LOG_INFO("PER: "<<(double)(rxdrop)/(double)(rxnum+rxdrop));
 }
