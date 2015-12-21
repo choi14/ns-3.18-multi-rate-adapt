@@ -148,7 +148,8 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_aid = 0;
 	start_nc = false;
   m_blockIter = 0;	
-	m_block.resize (m_blockSize);
+
+	//m_block.resize (m_blockSize);
 	for(uint8_t i=0; i<8; i++)
 	{
 		m_minPerOfMcs.push_back(1000);
@@ -162,6 +163,7 @@ AdhocWifiMac::AdhocWifiMac ()
 
 AdhocWifiMac::~AdhocWifiMac ()
 {
+	delete[] m_block;
   NS_LOG_FUNCTION (this);
 }
 
@@ -243,7 +245,16 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 		m_low->SetAlpha(m_alpha);
 		m_low->SetEDR(m_eta, m_delta, m_rho);
 		m_initialize = true;
+		
+		//NS_LOG_UNCOND("m_blockSize " << m_blockSize);
+		m_block = new Ptr<WifiMacQueue>[m_blockSize];
+		for(uint16_t i = 0; i < m_blockSize; i++)
+			m_block[i] = CreateObject<WifiMacQueue>();
+		m_blockIter = 0;
 	}
+
+	//if(m_src_eid > 10)
+	//	return;
 
 	// Network coding is enabled
 	if (m_nc_enabled)
@@ -263,42 +274,86 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 			m_MNC_Encoder.Encoding(m_src_eid, m_MNC_K, m_burstsize, m_MNC_P, sys);
 			for(uint8_t i = 0; i < m_burstsize; i++)
 			{ 
-				NS_LOG_INFO("Transmit " << (uint16_t)i << "th packet");
+				NS_LOG_INFO("Transmit " << (uint16_t)i << "th packet, m_blockIter = " << m_blockIter << " eid = " << (uint16_t) m_src_eid);
 				WifiMacHeader temphdr;
 				Ptr<const Packet> encoded_packet = m_MNC_Encoder.MNC_Dequeue(&temphdr);
 
 				RateTag tag(m_mcast_mcs); // mcs
 				ConstCast<Packet> (encoded_packet)->AddPacketTag(tag);
+				//break;
+				m_block[m_blockIter]->Enqueue(encoded_packet, temphdr);
 
-				Pkthdr pkthdr;
-				pkthdr.packet = encoded_packet;
-				pkthdr.hdr = temphdr;
-				NS_LOG_INFO("m_blockIter: " << m_blockIter);
-				m_block[m_blockIter].push_back (pkthdr);
-				temphdr.SetWep(1);
+				//Pkthdr pkthdr;
+				//pkthdr.packet = encoded_packet;
+				//pkthdr.hdr = temphdr;
+				//NS_LOG_INFO("m_blockIter: " << m_blockIter);
+				//m_block[m_blockIter].push_back (pkthdr);
+				//temphdr.SetWep(1);
 			}
 			m_MNC_Encoder.FlushAllBuffer();
+			//return;
 			m_blockIter++;
 
+			if(m_blockIter != m_blockSize)
+				return;
+
+			while(true){
+				bool exit_value = true;
+
+				for(uint16_t j = 0; j < m_blockIter; j++){
+					if(m_block[j]->GetSize() != 0){
+						exit_value = false;
+						break;
+					}
+				}
+				
+				if(exit_value)
+					break;
+
+				for(uint16_t j = 0; j < m_blockIter; j++){
+					if(m_block[j]->GetSize() == 0)
+						continue;
+					
+					WifiMacHeader temphdr;
+					Ptr<const Packet> interleaving_packet = m_block[j]->Dequeue(&temphdr);
+
+					if(m_qosSupported)
+					{
+						NS_ASSERT (tid < 8);
+						//NS_LOG_DEBUG(hdr.GetAddr1() << "edca Queue");
+						//temphdr.SetWep(1);
+						m_edca[QosUtilsMapTidToAc(tid)]->Queue(interleaving_packet, temphdr);
+					}
+					else
+					{
+						//NS_LOG_DEBUG("dca Queue");
+						NS_LOG_INFO("dca->Queue m_block = m_block[" << j << "], size = " << m_block[j]->GetSize());
+						//temphdr.SetWep(1);
+						m_dca->Queue(interleaving_packet, temphdr);
+					}
+				}
+			}
+			m_blockIter = 0;
+
+/*
 			// m_blockIter is same as m_blockSize
 			if(m_blockSize == m_blockIter)
 			{
-				uint16_t vsize = m_block[0].size();
-				for(uint16_t j = 0; j < m_blockIter; j++)
-				{
-					if(m_block[j].size () > vsize)
-					{
-						vsize = m_block[j].size();	
-					}
-				}
+				//uint16_t vsize = m_block[0].size();
+				//{
+				//	if(m_block[j].size () > vsize)
+				//	{
+				//		vsize = m_block[j].size();	
+				//	}
+				//}
 				for(uint16_t i = 0; i < vsize; i++)
 				{
 					for(uint16_t j = 0; j < m_blockIter; j++)
 					{
-						if(m_block[j].size () >= i)
+						if(m_block[j]->GetSize () >= i)
 						{
 							Ptr<const Packet> packet;
-							WifiMacHeader hdr;	
+							WifiMacHeader hdr;
 							packet = m_block[j][i].packet;
 							hdr = m_block[j][i].hdr;
 
@@ -318,12 +373,12 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 							}
 						}
 					}
-
 				}
 				m_blockIter = 0;
 				m_block.clear ();
 				m_block.resize (m_blockSize);
 			}
+			*/
 		}
 
 		// Network coding is disabled

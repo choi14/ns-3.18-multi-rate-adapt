@@ -96,6 +96,9 @@ main (int argc, char *argv[])
 	uint32_t edrType = 0;
 	uint32_t linearTime = 2000;
 
+	//blockSize
+	uint16_t blockSize = 5;
+
   double getTotalTx = 0.0;
 	double sumTotalRx = 0.0;
 	std::vector<double> getTotalRx;
@@ -120,6 +123,7 @@ main (int argc, char *argv[])
 	cmd.AddValue ("Rho", "weighting factor of deviation", rho);
 	cmd.AddValue ("EDRtype", "Type of EDR Calculation", edrType);
 	cmd.AddValue ("LinearTime", "Time of Linear Decreasing/Increasing", linearTime);
+	cmd.AddValue ("BlockSize", "weighting factor of deviation", blockSize);
 	cmd.Parse (argc, argv);
 	
 	SeedManager::SetRun(seed);
@@ -163,6 +167,7 @@ main (int argc, char *argv[])
 	Config::SetDefault ("ns3::AdhocWifiMac::Eta", DoubleValue (eta));
 	Config::SetDefault ("ns3::AdhocWifiMac::Delta", DoubleValue (delta));
 	Config::SetDefault ("ns3::AdhocWifiMac::Rho", DoubleValue (rho));
+	Config::SetDefault ("ns3::AdhocWifiMac::BlockSize", UintegerValue (blockSize));
 	// Mac-low.cc
 	Config::SetDefault ("ns3::MacLow::EDRtype", UintegerValue (edrType));
 	Config::SetDefault ("ns3::MacLow::LinearTime", UintegerValue (linearTime));

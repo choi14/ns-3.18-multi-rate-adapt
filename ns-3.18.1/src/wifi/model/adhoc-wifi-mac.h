@@ -132,7 +132,8 @@ private:
 	uint32_t m_tf_id;
 	Ptr<OnlineTableManager> m_tableManager;
 	std::vector<StaInfo> m_infos;
-	std::vector<std::vector<Pkthdr> > m_block;
+	Ptr<WifiMacQueue>* m_block;
+	//std::vector<std::vector<Pkthdr> > m_block;
 	std::vector<double> m_minPerOfMcs;
 	
 	WifiMode m_GroupTxMode;
