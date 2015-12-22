@@ -128,7 +128,7 @@ AdhocWifiMac::AdhocWifiMac ()
 	NS_LOG_FUNCTION (this);
 	m_initialize = false;
 	m_setMacLowValue = false;
-	m_setRobust = true;
+	m_setRobust = false;
 	m_feedbackPeriod = 100;
 	m_addBasicModes = 0;
 	m_minSnr = 0.0;

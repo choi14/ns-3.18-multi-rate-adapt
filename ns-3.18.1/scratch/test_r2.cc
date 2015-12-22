@@ -80,7 +80,7 @@ main (int argc, char *argv[])
 	uint64_t feedbackPeriod = 1000; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
 	double bound = 10.0; 
-	double endTime = 20;
+	double endTime = 100;
 	double perThreshold = 0.001;
 	// feedbackType 0
 	double percentile = 0.9; // [0, 1]
@@ -190,7 +190,7 @@ main (int argc, char *argv[])
 	txMobility.SetPositionAllocator (positionAlloc);
   txMobility.Install (txNodes.Get (0));
 
-  	
+  /*	
   std::stringstream DiscRho;
 	DiscRho << "ns3::UniformRandomVariable[Min=" << bound << "|Max=" << bound << "]";	
 	rxMobility.SetPositionAllocator ("ns3::RandomDiscPositionAllocator",
@@ -198,7 +198,8 @@ main (int argc, char *argv[])
 			"Y", StringValue ("0.0"),
 			"Rho", StringValue (DiscRho.str() ));
 	rxMobility.Install (rxNodes);
-	/*
+	*/
+
 	std::stringstream Rectangle;
 	Rectangle << "ns3::UniformRandomVariable[Min=" << -0.5*bound << "|Max=" << 0.5*bound << "]";
 	rxMobility.SetPositionAllocator ("ns3::RandomRectanglePositionAllocator",
@@ -206,7 +207,7 @@ main (int argc, char *argv[])
 			"Y", StringValue (Rectangle.str ()));
 	rxMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   rxMobility.Install (rxNodes);
-	*/
+	
 	/*
 	for (uint32_t i=0; i < rxNodes.GetN(); i++)
 	{
@@ -292,12 +293,12 @@ main (int argc, char *argv[])
 		case 3: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum << " edrType: " << edrType);
-			out_filename << "storage_results/result_edr3_151215/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << ".txt";
+			out_filename << "storage_results/result_edr3_151222/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << "_" << blockSize << ".txt";
 			break;
 		case 4: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum << " edrType: " << edrType);
-			out_filename << "storage_results/result_edr_test/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << ".txt";
+			out_filename << "storage_results/result_edr4_151222/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << "_" << blockSize << ".txt";
 			break;
 		default:
 			NS_LOG_UNCOND("Invalid type");
@@ -325,8 +326,8 @@ main (int argc, char *argv[])
 	Ptr<WifiNetDevice> rxNetDevice = rxDevice.Get(0)->GetObject<WifiNetDevice> ();
 	Ptr<WifiMac> rxMac = rxNetDevice->GetMac ();
 	Ptr<AdhocWifiMac> rxAdhocMac = DynamicCast<AdhocWifiMac> (rxMac);
-	uint32_t rxNum = rxAdhocMac->GetRxNum ();
-	NS_LOG_UNCOND("Node1 received (AdhocWifiMac): " << rxNum);
+	//uint32_t rxNum = rxAdhocMac->GetRxNum ();
+	//NS_LOG_UNCOND("Node1 received (AdhocWifiMac): " << rxNum);
 	//NS_LOG_UNCOND("AvgPer: " << 1 - (double)rxNum/(double)txNum);
 	
 	fout << "Source node sent: " << txNum << std::endl;
@@ -341,7 +342,7 @@ main (int argc, char *argv[])
 	{
 		Ptr<PacketSink> sink2 = rxApp.Get(i)->GetObject<PacketSink> ();
 		getTotalRx.push_back(sink2->GetTotalRx ()/1000);
-		//NS_LOG_UNCOND("Node " << i+1 << " received: " << getTotalRx[i]);
+		NS_LOG_UNCOND("Node " << i+1 << " received: " << getTotalRx[i]);
 		fout << "Node " << i+1 << " received: " << getTotalRx[i] << std::endl;
 		sumTotalRx += getTotalRx[i];
 	}
