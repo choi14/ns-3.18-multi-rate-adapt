@@ -140,13 +140,13 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_mcast_mcs = 0;
 	m_burstsize = 20;
 	m_src_eid = 0;
-	m_last_eid = 0;
 	m_MNC_K = 10;
 	m_MNC_P = 1;
 	m_k = 10;	
 	m_aid = 0;
 	start_nc = false;
 	m_blockIter = 0;
+	m_max_eid = 0;
 
 	m_rxNumBeforeNC = 0;
 	m_txNumBeforeNC = 0;
@@ -246,9 +246,11 @@ AdhocWifiMac::Enqueue (Ptr<const Packet> packet, Mac48Address to)
 		m_low->SetEDR(m_eta, m_delta, m_rho);
 		m_initialize = true;
 
+
 		m_block = new Ptr<WifiMacQueue>[m_blockSize];
 		for(uint16_t i = 0; i < m_blockSize; i++)
 			m_block[i] = CreateObject<WifiMacQueue>();
+
 		m_blockIter = 0;
 	}
 
@@ -882,6 +884,15 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 	uint32_t snr_db =(uint32_t)(10*std::log10(snr));
 
 	if (start_nc == false){
+		
+		NS_LOG_INFO("m_blockSize: " << m_blockSize);
+		m_decoding_eid = new uint16_t [m_blockSize];
+		for(uint16_t i = 0; i < m_blockSize; i++)
+			m_decoding_eid[i] = 0;
+
+		for(uint16_t i = 0; i < m_blockSize; i++)
+			NS_LOG_INFO("m_decoding_eid[" << i << "] " << m_decoding_eid[i]);
+
 		for (uint8_t i=0; i < 8; i++)
 		{	
 			m_tableManager->FillingBlank(i);
@@ -897,18 +908,34 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 
 	m_tableManager->SetN(nc_nn);
 	m_tableManager->UpdateTable(seq, eid, rate, snr_db);	
-	NS_LOG_INFO("Eid: " << eid << " Seq: " << seq << " last_eid: " << m_last_eid);
+	NS_LOG_INFO("Eid: " << eid << " Seq: " << seq);
 
-	// eid under last eid the pakcet is thrown out  
-	if (eid <= m_last_eid)
+	// Already decoded packet is dropped  
+	for(uint16_t i = 0; i < m_blockSize; i++)
 	{
-		NS_LOG_INFO("eid: " << eid << " m_last_eid: " << m_last_eid << " eid <= m_last_eid");
+		if(eid == m_decoding_eid[i])
+		{
+			NS_LOG_INFO("eid: " << eid << " m_decoding_eid: " << m_decoding_eid[i] <<
+					" Drop the packet already decoded eid");
+			return;
+		}
+	}
+
+	if(eid <= m_max_eid - m_blockSize)
+	{
+		NS_LOG_INFO("eid: " << eid << " m_max_eid: " << m_max_eid << " Drop the packet");
 		return;
 	}
 	
+	for(uint16_t i = 0; i < m_blockSize; i++)
+	{
+		if(m_decoding_eid[i] > m_max_eid)
+			m_max_eid = m_decoding_eid[i];
+	}
+
 	for(MNC_Decoder_QueueI iter = m_decoder_queue.begin(); iter != m_decoder_queue.end(); iter++)
 	{
-		if(iter->GetEid() <= eid - m_blockSize)
+		if(iter->GetEid() <= m_max_eid - m_blockSize)
 		{
 			if (iter->GetBufferSize() > 0)
 				NS_LOG_ERROR("New Eid coming. " << (uint16_t)iter->GetBufferSize() << " Packets are in Old buffer." );
@@ -922,7 +949,6 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 				ForwardUp (forward_packet, from, to);
 				m_rxNumBeforeNC++;
 			} //if
-			m_last_eid = iter->GetEid();
 		} 
 	}//for
 
@@ -949,16 +975,26 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 	{
 		NS_LOG_ERROR("Decoding Try: " << eid );
 
-		// Decoding Success or Failure
+		// Decoding Failure
 		if(!(iter->Decoding(m_MNC_K, m_MNC_P, false)))
 		{
 			NS_LOG_ERROR("Decoding Failure: " << eid);
 			return;
 		}
+		// Decoding Success
 		else
 		{
 			m_rxNumBeforeNC += m_MNC_K;
-			m_last_eid = eid;
+			if(m_decoding_eid[0] == 0)
+				m_decoding_eid[0] = eid;
+			else
+			{
+				for(uint16_t i = 1; i < m_blockSize; i++)
+				{
+					m_decoding_eid[m_blockSize-i] = m_decoding_eid[m_blockSize-1-i];
+				}
+				m_decoding_eid[0] = eid;
+			}
 			NS_LOG_ERROR("Decoding Success: " << eid);
 		}
 
@@ -970,7 +1006,6 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 			Ptr<Packet> forward_packet = decoded_packet->Copy();
 			ForwardUp (forward_packet, from, to);
 		} //for
-		//m_last_eid = iter->GetEid();
 	}
 }
 void

@@ -146,7 +146,8 @@ private:
 	uint8_t m_mcast_mcs;
 	uint8_t m_burstsize;
 	uint16_t m_src_eid;
-	uint16_t m_last_eid;
+	uint16_t* m_decoding_eid;
+	uint16_t m_max_eid;
 	uint16_t m_blockIter;
 	uint16_t m_blockSize;
 	bool m_nc_enabled;

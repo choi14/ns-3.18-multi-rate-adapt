@@ -72,15 +72,15 @@ int
 main (int argc, char *argv[])
 {
 	uint32_t txNodeNum = 1;
-	uint32_t rxNodeNum = 1;
+	uint32_t rxNodeNum = 10;
 	uint32_t seed = 0; // 1:1:100 
 	uint32_t rateAdaptType = 0; // 0, 1, 2 (0 = n*t) 
 	uint32_t feedbackType = 4; // 0, 1, 2, 3, 4
 	//uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 1000; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
-	double bound = 10.0; 
-	double endTime = 100;
+	double bound = 30.0; 
+	double endTime = 20;
 	double perThreshold = 0.001;
 	// feedbackType 0
 	double percentile = 0.9; // [0, 1]
@@ -93,11 +93,11 @@ main (int argc, char *argv[])
 	double delta = 0.1;
 	double rho = 0.1;
 	//EDR type
-	uint32_t edrType = 0;
+	uint32_t edrType = 4;
 	uint32_t linearTime = 2000;
 
 	//blockSize
-	uint16_t blockSize = 5;
+	uint16_t blockSize = 10;
 
   //double getTotalTx = 0.0;
 	double sumTotalRx = 0.0;
@@ -350,6 +350,7 @@ main (int argc, char *argv[])
 	double airtime = (totaltime - idletime)/totaltime;
 	fout << "AirTime: " << airtime << std::endl;
 	fout.close();
+	NS_LOG_UNCOND("TxTime: " << txtime);
 	NS_LOG_UNCOND("AirTime: " << airtime);
 	NS_LOG_UNCOND("AvgPer: " << 1 - sumTotalRx/(txNum*rxNodeNum));
 
