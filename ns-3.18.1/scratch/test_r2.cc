@@ -79,7 +79,7 @@ main (int argc, char *argv[])
 	//uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 1000; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
-	double bound = 30.0; 
+	double bound = 20.0; 
 	double endTime = 20;
 	double perThreshold = 0.001;
 	// feedbackType 0
@@ -298,7 +298,7 @@ main (int argc, char *argv[])
 		case 4: 
 			NS_LOG_UNCOND ("seed: " << seed << " feedbackPeriod: " << feedbackPeriod <<	" dopplerVelocity: " << dopplerVelocity <<
 					" feedbackType: " << feedbackType << " eta: " << eta << " delta: " << delta << " rho: " << rho <<  " bound: " << bound << " rxNodeNum: " << rxNodeNum << " edrType: " << edrType);
-			out_filename << "storage_results/result_edr4_151222/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << "_" << blockSize << ".txt";
+			out_filename << "storage_results/result_edr4_151223/edr_" << eta << "_" << delta << "_" << rho  << "_" << seed << "_" << rxNodeNum <<  "_" << feedbackPeriod << "_" << dopplerVelocity  << "_" << bound << "_" << edrType << "_" << linearTime << "_" << blockSize << ".txt";
 			break;
 		default:
 			NS_LOG_UNCOND("Invalid type");

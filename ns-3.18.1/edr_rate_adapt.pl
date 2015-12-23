@@ -15,11 +15,11 @@ foreach my $linearTime (2000){
 					foreach my $bound (10, 20){
 
 						print "Bound: $bound Period: $period Doppler: $doppler NumNode: $numNode\n";
-						my $output_filename1="storage_results/output_edr4_151222/result_per-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType"."-"."$linearTime"."-"."$blocksize".".txt";
+						my $output_filename1="storage_results/output_edr4_151223/result_per-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType"."-"."$linearTime"."-"."$blocksize".".txt";
 						open(OUT1, ">$output_filename1") ||die "Failed opening.\n";
-						my $output_filename2="storage_results/output_edr4_151222/result_air-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType"."-"."$linearTime"."-"."$blocksize".".txt";
+						my $output_filename2="storage_results/output_edr4_151223/result_air-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType"."-"."$linearTime"."-"."$blocksize".".txt";
 						open(OUT2, ">$output_filename2") ||die "Failed opening.\n";
-						my $output_filename3="storage_results/output_edr4_151222/result_node-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType"."-"."$linearTime"."-"."$blocksize".".txt";
+						my $output_filename3="storage_results/output_edr4_151223/result_node-"."$numNode"."-"."$period"."-"."$doppler"."-"."$bound"."-"."$edrType"."-"."$linearTime"."-"."$blocksize".".txt";
 						open(OUT3, ">$output_filename3") ||die "Failed opening.\n";
 
 						foreach my $eta (1){
@@ -48,7 +48,7 @@ foreach my $linearTime (2000){
 
 									#foreach my $seed (0,1,2,3,5,6,7,8,9){
 									for ($seed = 0; $seed < $seedNum; $seed++){
-										my $input_filename= "storage_results/result_edr4_151222/edr_"."$eta"."_"."$delta"."_"."$rho"."_"."$seed"."_"."$numNode"."_"."$period"."_"."$doppler"."_"."$bound"."_"."$edrType"."_"."$linearTime"."_"."$blocksize".".txt";
+										my $input_filename= "storage_results/result_edr4_151223/edr_"."$eta"."_"."$delta"."_"."$rho"."_"."$seed"."_"."$numNode"."_"."$period"."_"."$doppler"."_"."$bound"."_"."$edrType"."_"."$linearTime"."_"."$blocksize".".txt";
 										open(IN, "$input_filename") ||die "Failed opening $input_filename.\n";
 
 										my @per_seed = (0)x$numNode;
