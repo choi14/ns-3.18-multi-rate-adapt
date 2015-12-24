@@ -28,6 +28,7 @@
 #include "ns3/boolean.h"
 #include "ns3/trace-source-accessor.h"
 #include "ns3/simulator.h"
+#include "ns3/yans-wifi-phy.h"
 
 #include "qos-tag.h"
 #include "mac-low.h"
@@ -133,7 +134,7 @@ AdhocWifiMac::AdhocWifiMac ()
 	NS_LOG_FUNCTION (this);
 	m_initialize = false;
 	m_setMacLowValue = false;
-	m_setRobust = false;
+	m_setRobust = true;
 	m_feedbackPeriod = 100;
 	m_addBasicModes = 0;
 	m_minSnr = 0.0;
@@ -803,41 +804,52 @@ AdhocWifiMac::GroupRateAdaptation (void)
 	return m_GroupTxMcs;
 }
 
-void
+	void
 AdhocWifiMac::SendTraining(void)
 {
-	NS_LOG_FUNCTION (this << m_max);
-	NS_LOG_INFO("Send Training " << m_low->GetAddress());
-	WifiMacHeader hdr;
-	hdr.SetTypeData();
-	hdr.SetAddr1(Mac48Address::GetMulticastPrefix());
-	hdr.SetAddr2(m_low->GetAddress());
-	hdr.SetAddr3(m_low->GetBssid());
-	hdr.SetDsNotFrom();
-	hdr.SetDsNotTo();
-	hdr.SetMoreData(1);
+	m_txPowerLevel = 15;
+	m_txPowerStep = 1;
+	m_initialPower = 15.0206;
+	Ptr<YansWifiPhy> phy = DynamicCast<YansWifiPhy> (m_phy);
+	for(uint8_t i=0; i < m_txPowerLevel; i++)
+	{
+		phy->SetTxPowerStart(m_initialPower - m_txPowerStep * i);
+		phy->SetTxPowerEnd(m_initialPower - m_txPowerStep * i);
+		NS_LOG_UNCOND("MacAddress: " << m_low->GetAddress() << " TxPower: " << m_initialPower - m_txPowerStep*i);
+		
+		NS_LOG_FUNCTION (this << m_max);
+		NS_LOG_INFO("Send Training " << m_low->GetAddress());
+		WifiMacHeader hdr;
+		hdr.SetTypeData();
+		hdr.SetAddr1(Mac48Address::GetMulticastPrefix());
+		hdr.SetAddr2(m_low->GetAddress());
+		hdr.SetAddr3(m_low->GetBssid());
+		hdr.SetDsNotFrom();
+		hdr.SetDsNotTo();
+		hdr.SetMoreData(1);
 
-	TlHeader tl;
-	tl.SetType(TL_TF1);
-	tl.SetK(m_max);
-	
-	Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable> ();
-	uint16_t tmpId = (uint16_t) rand->GetInteger(0,0xffff);
-	m_tf_id = (m_tf_id != tmpId ? tmpId : ~tmpId);
-	
-	for (uint8_t j=0; j<8; j++){
-		for (uint32_t i = 0; i < m_max; i++)
-		{
-					Ptr<Packet> packet = Create<Packet>(1440);
-					
-					tl.SetSeq(i);
-					tl.SetRate(j);
-					tl.SetId(m_tf_id);
-					RateTag rtag(j);
+		TlHeader tl;
+		tl.SetType(TL_TF1);
+		tl.SetK(m_max);
 
-					packet->AddHeader(tl);
-					packet->AddPacketTag(rtag);
-					m_dca->Queue(packet, hdr);
+		Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable> ();
+		uint16_t tmpId = (uint16_t) rand->GetInteger(0,0xffff);
+		m_tf_id = (m_tf_id != tmpId ? tmpId : ~tmpId);
+
+		for (uint8_t j=0; j<8; j++){
+			for (uint32_t i = 0; i < m_max; i++)
+			{
+				Ptr<Packet> packet = Create<Packet>(1440);
+
+				tl.SetSeq(i);
+				tl.SetRate(j);
+				tl.SetId(m_tf_id);
+				RateTag rtag(j);
+
+				packet->AddHeader(tl);
+				packet->AddPacketTag(rtag);
+				m_dca->Queue(packet, hdr);
+			}
 		}
 	}
 }

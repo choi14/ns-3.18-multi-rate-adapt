@@ -11,7 +11,7 @@
 #include "ns3/mobility-model.h"
 #include <vector>
 
-//#define MAKINGTABLE
+#define MAKINGTABLE
 
 using namespace ns3;
 
@@ -252,7 +252,7 @@ main (int argc, char *argv[])
 	std::ostringstream in_filename;
 	
 	NS_LOG_UNCOND("in_filename: seed = " << seed << " bound = " << bound << " dopplerVelocity = " << dopplerVelocity);
-	in_filename << "storage_results/result_151223/table_" << seed << "_" << bound << "_" << dopplerVelocity << ".txt";
+	in_filename << "storage_results/online-table/table_" << seed << "_" << bound << "_" << dopplerVelocity << ".txt";
 	
 	fin.open(in_filename.str().c_str(), std::ostream::in);
 	if(!fin.good())
@@ -421,7 +421,7 @@ main (int argc, char *argv[])
 	std::ostringstream out_filename;
 	
 	NS_LOG_UNCOND("seed = " << seed << " bound = " << bound << " dopplerVelocity = " << dopplerVelocity);
-	out_filename << "storage_results/result_151223/table_" << seed << "_" << bound << "_" << dopplerVelocity << ".txt";
+	out_filename << "storage_results/online-table/table_" << seed << "_" << bound << "_" << dopplerVelocity << ".txt";
 	
 	fout.open(out_filename.str().c_str(), std::ostream::out);
 	if(!fout.good())

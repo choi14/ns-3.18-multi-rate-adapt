@@ -129,6 +129,9 @@ private:
 	uint32_t m_ratype;
 	uint32_t m_GroupTxMcs;
 	uint32_t m_max;
+	uint32_t m_txPowerLevel;
+	uint32_t m_txPowerStep;
+	double m_initialPower;
 	uint32_t m_tf_id;
 	std::vector<StaInfo> m_infos;
 	Ptr<WifiMacQueue>* m_block;
