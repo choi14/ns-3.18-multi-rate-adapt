@@ -247,12 +247,13 @@ void
 OnlineTableManager::PrintTable(Pdr table[][50], std::ostream &os){
 	os.precision (2);
 	for (uint32_t i = 0; i < 8; i++){
-		os << "MCS " << i << " Rcv: (";	
+		//os << "MCS " << i << " Rcv: (";	
 		for (uint32_t j=0; j<50; j++){
 				os << (table[i][j]).p << " ";
 		}
+		os << std::endl;
 
-		os << ")" << std::endl;
+		//os << ")" << std::endl;
 	}
 	os << std::endl;
 }
@@ -321,6 +322,11 @@ OnlineTableManager::SetPhy(Ptr<WifiPhy> phy)
 void
 OnlineTableManager::PrintOnlineTable(std::ostream &os){
 	PrintTable(m_table, os);
+}
+
+void
+OnlineTableManager::SetPdr (uint8_t mcs, uint32_t rssi, double pdr){
+	m_table[mcs][rssi].p = pdr;
 }
 
 double

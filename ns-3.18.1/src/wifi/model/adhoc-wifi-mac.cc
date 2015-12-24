@@ -119,6 +119,11 @@ AdhocWifiMac::GetTypeId (void)
 				UintegerValue(5),
 				MakeUintegerAccessor (&AdhocWifiMac::m_blockSize),
 				MakeUintegerChecker<uint16_t> ())
+		.AddAttribute ("IsMakingTable", 
+				"Is Making Table", 
+				BooleanValue(true),
+				MakeBooleanAccessor (&AdhocWifiMac::m_isMakingTable),
+				MakeBooleanChecker ())
   ;
   return tid;
 }
@@ -856,7 +861,8 @@ AdhocWifiMac::ReceiveTl (Ptr<Packet> packet, Mac48Address from)
 					uint32_t snr_db =(uint32_t)(10*std::log10(snr));
 
 					//NS_LOG_INFO("Rate: " << rate << " Id: " << id << " Seq: " << seq << " Snr: " << snr_db);
-					m_tableManager->InitialTable(seq, id, rate, snr_db); 	
+					if(m_isMakingTable)
+						m_tableManager->InitialTable(seq, id, rate, snr_db); 	
 			
 					break;
 				 }
@@ -893,21 +899,26 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 		for(uint16_t i = 0; i < m_blockSize; i++)
 			NS_LOG_INFO("m_decoding_eid[" << i << "] " << m_decoding_eid[i]);
 
-		for (uint8_t i=0; i < 8; i++)
-		{	
-			m_tableManager->FillingBlank(i);
+		if(m_isMakingTable){
+			for (uint8_t i=0; i < 8; i++)
+			{	
+				m_tableManager->FillingBlank(i);
+			}
+			m_tableManager->Monotonicity();
 		}
-		m_tableManager->Monotonicity();
 
 		//NS_LOG_UNCOND("AID " << m_aid << " Init table");
 		//m_tableManager->PrintOnlineTable(std::cout);
 		uint8_t n = coeffi.GetN();
-		m_tableManager->SetN((uint16_t)n);
+		if(m_isMakingTable)
+			m_tableManager->SetN((uint16_t)n);
 		start_nc = true;
 	}
 
-	m_tableManager->SetN(nc_nn);
-	m_tableManager->UpdateTable(seq, eid, rate, snr_db);	
+	if(m_isMakingTable){
+		m_tableManager->SetN(nc_nn);
+		m_tableManager->UpdateTable(seq, eid, rate, snr_db);	
+	}
 	NS_LOG_INFO("Eid: " << eid << " Seq: " << seq);
 
 	// Already decoded packet is dropped  
@@ -1022,9 +1033,11 @@ AdhocWifiMac::SetBasicModes(void)
 
   //NS_LOG_UNCOND ("Number of Basic Modes: " << m_stationManager->GetNBasicModes());
 	
-	m_tableManager->SetRemoteStation(m_stationManager);
-	m_tableManager->SetPhy(m_phy);
-	m_tableManager->GenerateCorrectTable();
+	if(m_isMakingTable){
+		m_tableManager->SetRemoteStation(m_stationManager);
+		m_tableManager->SetPhy(m_phy);
+		m_tableManager->GenerateCorrectTable();
+	}
 }
 
 void

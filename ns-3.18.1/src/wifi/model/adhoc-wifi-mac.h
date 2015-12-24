@@ -95,6 +95,7 @@ public:
   void SetAid (uint32_t aid);
 	uint32_t m_rxNumBeforeNC;
 	uint32_t m_txNumBeforeNC;
+	Ptr<OnlineTableManager> m_tableManager;
 
 private:
   virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
@@ -129,10 +130,11 @@ private:
 	uint32_t m_GroupTxMcs;
 	uint32_t m_max;
 	uint32_t m_tf_id;
-	Ptr<OnlineTableManager> m_tableManager;
 	std::vector<StaInfo> m_infos;
 	Ptr<WifiMacQueue>* m_block;
 	std::vector<double> m_minPerOfMcs;
+
+	bool m_isMakingTable;
 	
 	WifiMode m_GroupTxMode;
 

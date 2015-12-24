@@ -44,6 +44,7 @@ public:
   void FillingBlank(uint8_t mcs);
   void SetN(uint16_t n);
   void Monotonicity(void);
+	void SetPdr (uint8_t mcs, uint32_t rssi, double pdr);
 
 private:
 	Pdr m_table[8][50];
