@@ -134,7 +134,7 @@ AdhocWifiMac::AdhocWifiMac ()
 	NS_LOG_FUNCTION (this);
 	m_initialize = false;
 	m_setMacLowValue = false;
-	m_setRobust = true;
+	m_setRobust = false;
 	m_feedbackPeriod = 100;
 	m_addBasicModes = 0;
 	m_minSnr = 0.0;
@@ -911,13 +911,15 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 		for(uint16_t i = 0; i < m_blockSize; i++)
 			NS_LOG_INFO("m_decoding_eid[" << i << "] " << m_decoding_eid[i]);
 
-		if(m_isMakingTable){
+		//if(m_isMakingTable){
 			for (uint8_t i=0; i < 8; i++)
 			{	
 				m_tableManager->FillingBlank(i);
 			}
 			m_tableManager->Monotonicity();
-		}
+			NS_LOG_UNCOND("Crazy Table");
+			m_tableManager->PrintOnlineTable(std::cout);
+		//}
 
 		//NS_LOG_UNCOND("AID " << m_aid << " Init table");
 		//m_tableManager->PrintOnlineTable(std::cout);
