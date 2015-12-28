@@ -96,7 +96,7 @@ main (int argc, char *argv[])
 	// feedbackType 2
 	double beta = 0.5; // 0 0.5 1.0
 	// feedbackType 3
-	double eta = 1.0;
+	double eta = 2.0;
 	double delta = 0.1;
 	double rho = 0.1;
 	//EDR type
@@ -104,7 +104,7 @@ main (int argc, char *argv[])
 	uint32_t linearTime = 2000;
 
 	//blockSize
-	uint16_t blockSize = 1;
+	uint16_t blockSize = 10;
 
   //double getTotalTx = 0.0;
 #ifndef MAKINGTABLE

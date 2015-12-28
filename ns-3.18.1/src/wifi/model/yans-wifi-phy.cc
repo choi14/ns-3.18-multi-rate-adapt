@@ -551,7 +551,7 @@ maybeCcaBusy:
 void
 YansWifiPhy::SendPacket (Ptr<const Packet> packet, WifiMode txMode, WifiPreamble preamble, WifiTxVector txVector)
 {
-  NS_LOG_FUNCTION (this << packet << txMode << preamble << (uint32_t)txVector.GetTxPowerLevel());
+  NS_LOG_INFO (this << packet << txMode << preamble << (uint32_t)txVector.GetTxPowerLevel());
   /* Transmission can happen if:
    *  - we are syncing on a packet. It is the responsability of the
    *    MAC layer to avoid doing this but the PHY does nothing to
@@ -561,7 +561,7 @@ YansWifiPhy::SendPacket (Ptr<const Packet> packet, WifiMode txMode, WifiPreamble
   NS_ASSERT (!m_state->IsStateTx () && !m_state->IsStateSwitching ());
 
   Time txDuration = CalculateTxDuration (packet->GetSize (), txVector, preamble);
-	NS_LOG_INFO ("PacketSize: " << packet->GetSize () << " txVector: " << txVector << " Preamble: " << preamble);
+	//NS_LOG_INFO ("PacketSize: " << packet->GetSize () << " txVector: " << txVector << " Preamble: " << preamble);
   if (m_state->IsStateRx ())
     {
       m_endRxEvent.Cancel ();
@@ -572,6 +572,16 @@ YansWifiPhy::SendPacket (Ptr<const Packet> packet, WifiMode txMode, WifiPreamble
   bool isShortPreamble = (WIFI_PREAMBLE_SHORT == preamble);
   NotifyMonitorSniffTx (packet, (uint16_t)GetChannelFrequencyMhz (), GetChannelNumber (), dataRate500KbpsUnits, isShortPreamble, txVector.GetTxPowerLevel());
   m_state->SwitchToTx (txDuration, packet, txVector.GetMode(), preamble,  txVector.GetTxPowerLevel());
+
+	/*
+	static double jychoi_power = 30;
+	if(jychoi_power < -30){
+		jychoi_power = 30;
+	}
+	m_channel->Send (this, packet, jychoi_power + m_txGainDb, txVector, preamble);
+  NS_LOG_UNCOND (this  << " " <<  packet  << " " <<  txMode  << " " <<  preamble  << " " <<  jychoi_power << " " << m_txGainDb);
+	jychoi_power = jychoi_power-0.3;
+	*/
   m_channel->Send (this, packet, GetPowerDbm ( txVector.GetTxPowerLevel()) + m_txGainDb, txVector, preamble);
 }
 

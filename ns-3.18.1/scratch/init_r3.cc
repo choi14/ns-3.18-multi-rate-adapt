@@ -31,7 +31,9 @@ double start_time = 30;
 
 static void StartTl(Ptr<AdhocWifiMac> mac)
 {
+#ifndef MAKINGTABLE
 	 mac->SetBasicModes();
+#endif
 #ifdef MAKINGTABLE
 	 mac->SendTraining();
 #endif
@@ -106,6 +108,7 @@ main (int argc, char *argv[])
 	//blockSize
 	uint16_t blockSize = 10;
 
+	uint32_t maxSize = 10000000;
   //double getTotalTx = 0.0;
 #ifndef MAKINGTABLE
 	double sumTotalRx = 0.0;
@@ -165,6 +168,8 @@ main (int argc, char *argv[])
 	double dopplerFrq = dopplerVelocity*50/3; 
 	wifiChannel.AddPropagationLoss("ns3::JakesPropagationLossModel");
 	Config::SetDefault ("ns3::JakesProcess::DopplerFrequencyHz", DoubleValue (dopplerFrq));
+	// Wifi-mac-queue.cc
+	Config::SetDefault ("ns3::WifiMacQueue::MaxPacketNumber", UintegerValue (maxSize));
 	// Adhoc-wifi-mac.cc
 	Config::SetDefault ("ns3::AdhocWifiMac::RateAdaptType", UintegerValue (rateAdaptType));
 	Config::SetDefault ("ns3::AdhocWifiMac::PerThreshold", DoubleValue (perThreshold));
@@ -410,11 +415,14 @@ main (int argc, char *argv[])
 		Ptr<WifiNetDevice> dev = allDevice.Get(i)->GetObject<WifiNetDevice> ();
 		Ptr<AdhocWifiMac> mac = dev->GetMac()->GetObject<AdhocWifiMac> ();
 		mac->SetAid(i);
-		Simulator::Schedule (Seconds (i*2), &StartTl, mac);
+		mac->SetBasicModes();
+		for(uint32_t j = 0; j < 10; j++){
+			Simulator::Schedule (Seconds (i*200 + j*20), &StartTl, mac);
+		}
 	}
 	
 	NS_LOG_UNCOND("allDevice.GetN() = " << allDevice.GetN());
-	Simulator::Stop (Seconds (allDevice.GetN()*2));
+	Simulator::Stop (Seconds (allDevice.GetN()*200 + 1));
   Simulator::Run ();
 	
 	std::ofstream fout;
@@ -431,7 +439,9 @@ main (int argc, char *argv[])
 		Ptr<WifiNetDevice> dev = allDevice.Get(i)->GetObject<WifiNetDevice> ();
 		Ptr<AdhocWifiMac> mac = dev->GetMac()->GetObject<AdhocWifiMac> ();
 		Ptr<OnlineTableManager> tableManager = mac->m_tableManager;
+		tableManager->Monotonicity();
 		tableManager->PrintOnlineTable(fout);
+		tableManager->PrintOnlineTable(std::cout);
 		//mac->SetAid(i);
 		//Simulator::Schedule (Seconds (i*2), &StartTl, mac);
 	}

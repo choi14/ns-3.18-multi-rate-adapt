@@ -51,7 +51,7 @@ OnlineTableManager::OnlineTableManager():
 		m_transition = 2;
 		m_nc_n = 20;
 		//m_last_seq = 0;
-		m_training_max = 100;
+		m_training_max = 1000;
 		m_min_num_samples = 5;
 
 		sampling_period = Time(MilliSeconds(20));
@@ -247,9 +247,16 @@ void
 OnlineTableManager::PrintTable(Pdr table[][50], std::ostream &os){
 	os.precision (2);
 	for (uint32_t i = 0; i < 8; i++){
-		//os << "MCS " << i << " Rcv: (";	
+		//os << "MCS " << i << " Rcv: (";
+		bool is_max = false;
 		for (uint32_t j=0; j<50; j++){
+			if(is_max)
+				os << threshold_high << " ";
+			else
 				os << (table[i][j]).p << " ";
+
+			if((table[i][j]).p == threshold_high)
+				is_max = true;
 		}
 		os << std::endl;
 
@@ -259,7 +266,8 @@ OnlineTableManager::PrintTable(Pdr table[][50], std::ostream &os){
 }
 
 void
-OnlineTableManager::SetTrainingMax(uint16_t max){
+OnlineTableManager::SetTrainingMax(uint16_t max)
+{
 		m_training_max = max;
 }
 

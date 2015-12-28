@@ -140,7 +140,7 @@ AdhocWifiMac::AdhocWifiMac ()
 	m_minSnr = 0.0;
 	m_minSnrLinear = 0.0;
 	m_minNT = 0.0;
-	m_max = 100;
+	m_max = 1000;
 	m_tf_id = 0;
 	m_nc_enabled = true;
 	m_mcast_mcs = 0;
@@ -804,52 +804,51 @@ AdhocWifiMac::GroupRateAdaptation (void)
 	return m_GroupTxMcs;
 }
 
-	void
+void
 AdhocWifiMac::SendTraining(void)
 {
-	m_txPowerLevel = 15;
-	m_txPowerStep = 1;
-	m_initialPower = 15.0206;
+	m_max = 750;
+	m_tableManager->SetTrainingMax(m_max);
+	// jychoi
 	Ptr<YansWifiPhy> phy = DynamicCast<YansWifiPhy> (m_phy);
-	for(uint8_t i=0; i < m_txPowerLevel; i++)
-	{
-		phy->SetTxPowerStart(m_initialPower - m_txPowerStep * i);
-		phy->SetTxPowerEnd(m_initialPower - m_txPowerStep * i);
-		NS_LOG_UNCOND("MacAddress: " << m_low->GetAddress() << " TxPower: " << m_initialPower - m_txPowerStep*i);
-		
-		NS_LOG_FUNCTION (this << m_max);
-		NS_LOG_INFO("Send Training " << m_low->GetAddress());
-		WifiMacHeader hdr;
-		hdr.SetTypeData();
-		hdr.SetAddr1(Mac48Address::GetMulticastPrefix());
-		hdr.SetAddr2(m_low->GetAddress());
-		hdr.SetAddr3(m_low->GetBssid());
-		hdr.SetDsNotFrom();
-		hdr.SetDsNotTo();
-		hdr.SetMoreData(1);
+	phy->SetTxPowerStart(15);
+	phy->SetTxPowerEnd(15);
+	phy->SetNTxPower (1);
 
-		TlHeader tl;
-		tl.SetType(TL_TF1);
-		tl.SetK(m_max);
+	NS_LOG_UNCOND("MacAddress: " << m_low->GetAddress());
+	NS_LOG_FUNCTION (this << m_max);
+	NS_LOG_UNCOND("Send Training " << m_low->GetAddress());
+	WifiMacHeader hdr;
+	hdr.SetTypeData();
+	hdr.SetAddr1(Mac48Address::GetMulticastPrefix());
+	hdr.SetAddr2(m_low->GetAddress());
+	hdr.SetAddr3(m_low->GetBssid());
+	hdr.SetDsNotFrom();
+	hdr.SetDsNotTo();
+	hdr.SetMoreData(1);
 
-		Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable> ();
-		uint16_t tmpId = (uint16_t) rand->GetInteger(0,0xffff);
-		m_tf_id = (m_tf_id != tmpId ? tmpId : ~tmpId);
+	TlHeader tl;
+	tl.SetType(TL_TF1);
+	tl.SetK(m_max);
 
-		for (uint8_t j=0; j<8; j++){
-			for (uint32_t i = 0; i < m_max; i++)
-			{
-				Ptr<Packet> packet = Create<Packet>(1440);
+	Ptr<UniformRandomVariable> rand = CreateObject<UniformRandomVariable> ();
+	uint16_t tmpId = (uint16_t) rand->GetInteger(0,0xffff);
+	m_tf_id = (m_tf_id != tmpId ? tmpId : ~tmpId);
 
-				tl.SetSeq(i);
-				tl.SetRate(j);
-				tl.SetId(m_tf_id);
-				RateTag rtag(j);
+	for (uint8_t j=0; j<8; j++){
+		for (uint32_t i = 0; i < m_max; i++)
+		{
+			//NS_LOG_UNCOND("i = " << i);
+			Ptr<Packet> packet = Create<Packet>(1440);
 
-				packet->AddHeader(tl);
-				packet->AddPacketTag(rtag);
-				m_dca->Queue(packet, hdr);
-			}
+			tl.SetSeq(i);
+			tl.SetRate(j);
+			tl.SetId(m_tf_id);
+			RateTag rtag(j);
+
+			packet->AddHeader(tl);
+			packet->AddPacketTag(rtag);
+			m_dca->Queue(packet, hdr);
 		}
 	}
 }
@@ -917,8 +916,8 @@ AdhocWifiMac::ReceiveNC (Ptr<Packet> packet, const WifiMacHeader *hdr)
 				m_tableManager->FillingBlank(i);
 			}
 			m_tableManager->Monotonicity();
-			NS_LOG_UNCOND("Crazy Table");
-			m_tableManager->PrintOnlineTable(std::cout);
+			//NS_LOG_UNCOND("Crazy Table");
+			//m_tableManager->PrintOnlineTable(std::cout);
 		//}
 
 		//NS_LOG_UNCOND("AID " << m_aid << " Init table");
