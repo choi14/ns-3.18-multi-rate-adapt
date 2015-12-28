@@ -840,6 +840,7 @@ MacLow::GetRxMcs (void)
 {
 		return m_rxMcs;
 }
+<<<<<<< HEAD
 // jychoi
 void
 MacLow::CalculatePerOfRate (void)
@@ -859,6 +860,8 @@ MacLow::CalculatePerOfRate (void)
 		}
 	}
 }
+=======
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 
 // jychoi
 struct rxInfo
@@ -1455,10 +1458,16 @@ MacLow::ReceiveOk (Ptr<Packet> packet, double rxSnr, double rxRssi,  WifiMode tx
 						if (m_stationManager->GetBasicMode(i) == txMode)
 								m_rxMcs = i;
 					}
+<<<<<<< HEAD
 					m_rxRssi = rxRssi;
 					NS_LOG_INFO ("[rx group] m_rxRssi: " << m_rxRssi << " m_rxSnr: " << m_rxSnr);
 					CalculateEwma ();
 					CalculateEDR ();
+=======
+
+					CalculateEwma (m_alpha);
+					CalculateEDR (m_eta, m_delta, m_rho);
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 					SetRxSnrVector(rxSnr);
 					SetRxRssiVector(rxRssi);
 					

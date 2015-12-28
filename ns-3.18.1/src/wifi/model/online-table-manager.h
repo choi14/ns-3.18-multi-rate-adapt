@@ -39,12 +39,18 @@ public:
   void SetRemoteStation(Ptr<WifiRemoteStationManager> manager);
   void SetPhy(Ptr<WifiPhy> phy);
   void PrintOnlineTable(std::ostream &os);
+<<<<<<< HEAD
   void PrintCorrectTable(std::ostream &os);
+=======
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
  double GetPdr(uint8_t mcs, uint32_t rssi);
   void FillingBlank(uint8_t mcs);
   void SetN(uint16_t n);
   void Monotonicity(void);
+<<<<<<< HEAD
 	void SetPdr (uint8_t mcs, uint32_t rssi, double pdr);
+=======
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 
 private:
 	Pdr m_table[8][50];

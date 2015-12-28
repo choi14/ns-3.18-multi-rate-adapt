@@ -51,7 +51,11 @@ OnlineTableManager::OnlineTableManager():
 		m_transition = 2;
 		m_nc_n = 20;
 		//m_last_seq = 0;
+<<<<<<< HEAD
 		m_training_max = 1000;
+=======
+		m_training_max = 100;
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 		m_min_num_samples = 5;
 
 		sampling_period = Time(MilliSeconds(20));
@@ -198,7 +202,11 @@ OnlineTableManager::SamplingTimeout (void){
 	//double pdr = (double)m_rcv / (double)m_tot;
 	//uint32_t rssi_avg = m_rssi_cur / m_rcv;
 	
+<<<<<<< HEAD
 	//NS_LOG_LOGIC("Sampling Timeout Pdr: " << pdr << " Rssi: " << rssi_avg  << " rcv: " << m_rcv << " tot: " << m_tot << " mcs: " << (uint32_t)m_mcs_cur); 
+=======
+	NS_LOG_LOGIC("Sampling Timeout Pdr: " << pdr << " Rssi: " << rssi_avg  << " rcv: " << m_rcv << " tot: " << m_tot << " mcs: " << (uint32_t)m_mcs_cur); 
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 	
 	if (m_tot > m_min_num_samples)
 		RecordSample(m_mcs_cur, m_rssi_cur, m_rcv, m_tot);
@@ -250,6 +258,7 @@ OnlineTableManager::PrintTable(Pdr table[][50], std::ostream &os){
 		//os << "MCS " << i << " Rcv: (";
 		bool is_max = false;
 		for (uint32_t j=0; j<50; j++){
+<<<<<<< HEAD
 			if(is_max)
 				os << threshold_high << " ";
 			else
@@ -257,6 +266,9 @@ OnlineTableManager::PrintTable(Pdr table[][50], std::ostream &os){
 
 			if((table[i][j]).p == threshold_high)
 				is_max = true;
+=======
+				os << (table[i][j]).p << " ";
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 		}
 		os << std::endl;
 
@@ -332,6 +344,7 @@ OnlineTableManager::PrintOnlineTable(std::ostream &os){
 	PrintTable(m_table, os);
 }
 
+<<<<<<< HEAD
 void
 OnlineTableManager::SetPdr (uint8_t mcs, uint32_t rssi, double pdr){
 	m_table[mcs][rssi].p = pdr;
@@ -345,6 +358,11 @@ OnlineTableManager::GetPdr (uint8_t mcs, uint32_t rssi){
 			return threshold_high;
 	else
 			return m_table[mcs][rssi].p;
+=======
+double
+OnlineTableManager::GetPdr (uint8_t mcs, uint32_t rssi){
+	return m_table[mcs][rssi].p;
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 }
 
 void
@@ -414,6 +432,7 @@ OnlineTableManager::Monotonicity(void){
 		NS_LOG_INFO("MCS :  "<< (uint32_t)i <<  " High: " << m_rssi_high[i] << " Low: " << m_rssi_low[i] << " RefMCS: " << (uint32_t)ref_mcs);
 	}
 	if (ref_mcs == 8){
+<<<<<<< HEAD
 			uint32_t id_mcs = 50;
 			for (uint8_t i = 0; i < 8; i++){
 					uint32_t temp_id = m_rssi_high[i] > i ? m_rssi_high[i] - (uint32_t)i : 0;
@@ -426,6 +445,10 @@ OnlineTableManager::Monotonicity(void){
 	}
 		
 	NS_LOG_INFO("REF MCS :  "<< (uint32_t)ref_mcs <<  " High: " << m_rssi_high[ref_mcs] << " Low: " << m_rssi_low[ref_mcs]);
+=======
+			ref_mcs = 0;
+	}
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 
 	if (m_no_low[ref_mcs]){
 		double rssi_high_value = (m_table[ref_mcs][m_rssi_high[ref_mcs]]).p;
@@ -438,6 +461,7 @@ OnlineTableManager::Monotonicity(void){
 		else{
 			slope = (rssi_high_value - rssi_low_value) / (double)(m_rssi_high[ref_mcs] - m_rssi_low[ref_mcs]);
 		}
+<<<<<<< HEAD
 
 		if (m_rssi_low[ref_mcs] > m_rssi_high[ref_mcs]-m_transition){
 				for (uint32_t k = m_rssi_low[ref_mcs]; k >= m_rssi_high[ref_mcs]-m_transition; k--){
@@ -447,6 +471,14 @@ OnlineTableManager::Monotonicity(void){
 								m_table[ref_mcs][k].p = 0;
 								break;
 						}
+=======
+		for (uint32_t k = m_rssi_low[ref_mcs]; k >= m_rssi_high[ref_mcs]-m_transition; k--){
+				m_table[ref_mcs][k].p = rssi_high_value - (double)(m_rssi_high[ref_mcs]-k)*slope;
+				m_rssi_low[ref_mcs] = k;
+				if (m_table[ref_mcs][k].p < threshold_low){
+						m_table[ref_mcs][k].p = 0;
+						break;
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 				}
 		}
 
@@ -556,12 +588,15 @@ OnlineTableManager::Monotonicity(void){
 
 
 void
+<<<<<<< HEAD
 OnlineTableManager::PrintCorrectTable(std::ostream &os){
 	PrintTable(m_correct_table, os);
 }
 
 
 void
+=======
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 OnlineTableManager::SetN(uint16_t nc_n){
 		m_nc_n = nc_n;
 }

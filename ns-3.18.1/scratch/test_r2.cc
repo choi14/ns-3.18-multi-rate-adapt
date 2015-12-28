@@ -8,7 +8,10 @@
 #include "ns3/fb-headers.h"
 #include "ns3/adhoc-wifi-mac.h"
 #include "ns3/mobility-model.h"
+<<<<<<< HEAD:ns-3.18.1/scratch/test_r2.cc
 #include <vector>
+=======
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e:ns-3.18.1/scratch/test_ycshin.cc
 
 using namespace ns3;
 
@@ -79,8 +82,13 @@ main (int argc, char *argv[])
 	//uint32_t nc_k = 10;	
 	uint64_t feedbackPeriod = 1000; // MilliSeconds
 	double dopplerVelocity = 0.1; // 0.5:0.5:2
+<<<<<<< HEAD:ns-3.18.1/scratch/test_r2.cc
 	double bound = 20.0; 
 	double endTime = 20;
+=======
+	double bound = 10.0; 
+	double endTime = 30;
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e:ns-3.18.1/scratch/test_ycshin.cc
 	double perThreshold = 0.001;
 	// feedbackType 0
 	double percentile = 0.9; // [0, 1]
@@ -188,6 +196,7 @@ main (int argc, char *argv[])
 	Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator> ();
 	positionAlloc->Add (Vector (0.0, 0.0, 0.0));
 	txMobility.SetPositionAllocator (positionAlloc);
+<<<<<<< HEAD:ns-3.18.1/scratch/test_r2.cc
   txMobility.Install (txNodes.Get (0));
 
   /*	
@@ -214,6 +223,24 @@ main (int argc, char *argv[])
 		std::cout <<	 rxNodes.Get(i)->GetObject<MobilityModel> ()->GetPosition() << std::endl;
 	}
 */
+=======
+    txMobility.Install (txNodes.Get (0));
+
+    std::stringstream DiscRho;
+	DiscRho << "ns3::UniformRandomVariable[Min=" << -1*bound << "|Max=" << bound << "]";	//ycshin modified
+	rxMobility.SetPositionAllocator ("ns3::RandomRectanglePositionAllocator",
+			"X", StringValue (DiscRho.str()),
+			"Y", StringValue (DiscRho.str()));
+	rxMobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+
+	for (uint32_t n = 0; n < rxNodes.GetN(); n++)
+	    rxMobility.Install (rxNodes.Get(n));
+
+	for (uint32_t n = 0; n < rxNodes.GetN(); n++){
+		NS_LOG_UNCOND(rxNodes.Get(n)->GetObject<MobilityModel> ()->GetPosition());	
+	}
+
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e:ns-3.18.1/scratch/test_ycshin.cc
 	InternetStackHelper stack;
 	stack.Install (txNodes);
 	stack.Install (rxNodes);

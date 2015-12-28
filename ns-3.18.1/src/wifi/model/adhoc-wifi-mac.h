@@ -92,10 +92,15 @@ public:
 	uint32_t GetTxNum(void);
 	struct rxInfo m_rxInfoSet;
   struct rxInfo m_rxInfoGet;
+<<<<<<< HEAD
   void SetAid (uint32_t aid);
 	uint32_t m_rxNumBeforeNC;
 	uint32_t m_txNumBeforeNC;
 	Ptr<OnlineTableManager> m_tableManager;
+=======
+  void SetAid(uint32_t aid);
+
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 
 private:
   virtual void Receive (Ptr<Packet> packet, const WifiMacHeader *hdr);
@@ -121,6 +126,7 @@ private:
 	double m_eta;
 	double m_delta;
 	double m_rho;
+<<<<<<< HEAD
 	double m_per;
 	double m_minSnr;
 	double m_minSnrLinear;
@@ -132,6 +138,9 @@ private:
 	uint32_t m_txPowerLevel;
 	uint32_t m_txPowerStep;
 	double m_initialPower;
+=======
+	uint16_t m_max;
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 	uint32_t m_tf_id;
 	std::vector<StaInfo> m_infos;
 	Ptr<WifiMacQueue>* m_block;
@@ -158,7 +167,11 @@ private:
 	bool m_nc_enabled;
 	uint8_t m_MNC_K;
 	uint8_t m_MNC_P;
+<<<<<<< HEAD
 	
+=======
+   
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 	uint32_t m_aid;
 	bool start_nc;
 };

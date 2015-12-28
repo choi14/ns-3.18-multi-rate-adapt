@@ -524,8 +524,11 @@ public:
   void RegisterBlockAckListenerForAc (enum AcIndex ac, MacLowBlockAckEventListener *listener);
   double GetRxSnr(void);
   uint8_t GetRxMcs(void);
+<<<<<<< HEAD
 	uint32_t m_edrType;
 	uint32_t m_linearTime;
+=======
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 
 private:
   void CancelAllEvents (void);
@@ -713,12 +716,16 @@ private:
 	uint32_t m_rxSnrVectorSize;
 	uint32_t m_rxRssiVectorSize;
 	double m_rxSnr;
+<<<<<<< HEAD
 	double m_rxRssi;
 	double m_currentInput;
 	double m_previousInput;
 	Time m_currentTime;
 	Time m_previousTime;
 	
+=======
+	uint8_t m_rxMcs;
+>>>>>>> 508774c8d2dda51460a574d7179b33290ad8c37e
 	// type 1 EWMA
 	double m_ewmaSnr;
 	double m_ewmaRssi;
